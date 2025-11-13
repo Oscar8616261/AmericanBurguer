@@ -22,29 +22,452 @@
 </head>
 <body>
     <style>
-        .Pizz {
-            font-size: 7ch;
-            text-align: center;
-        }
-        .redes {
-            text-align: center;
-        }
+        /* ==== PALETA PROFESIONAL ==== */
+    :root {
+        --azul-principal: #0A3D91;
+        --azul-secundario: #0F52BA;
+        --azul-oscuro: #072C6B;
+        --celeste: #4FB6FF;
+        --blanco: #ffffff;
+        --gris-suave: #e8eef6;
+    }
+
+    /* ==== FONDO GENERAL ==== */
+    /* FONDO COMPLETO SOLO PARA EL BODY */
+    body {
+        background: #0A3D91; /* azul sólido profesional */
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        width: 100%;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        color: white; /* texto blanco */
+    }
+
+
+    /* ==== ENCABEZADO ==== */
+    header {
+        background: linear-gradient(90deg, var(--azul-oscuro), var(--azul-secundario));
+        padding: 15px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+    }
+
+    header .logo {
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .4));
+    }
+
+    /* Título principal */
+    .Pizz {
+        color: var(--blanco);
+        font-weight: 900;
+        letter-spacing: 2px;
+        text-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    }
+
+    /* ==== MENÚ ==== */
+    .menu nav a,
+    .menu nav button {
+        background: var(--azul-secundario);
+        color: var(--blanco) !important;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-weight: 700;
+        border: 1px solid rgba(255,255,255,0.15);
+        transition: 0.2s ease-in-out;
+    }
+
+    .menu nav a:hover,
+    .menu nav button:hover {
+        background: var(--celeste);
+        color: var(--azul-oscuro) !important;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+    }
+
+    /* Texto de bienvenida */
+    .menu nav p {
+        background: rgba(255,255,255,0.15);
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+
+    /* Logout más elegante */
+    .menu nav form button {
+        background: #d62828;
+        color: var(--blanco);
+        border-radius: 10px;
+    }
+    .menu nav form button:hover {
+        background: #ff4545;
+    }
+
+    /* ==== CONTENIDO ==== */
+    /* Hacer que la sección de contenido ocupe todo el ancho */
+    section {
+        width: 100%;
+        max-width: 100% !important;
+        padding: 40px 20px;
+        background: var(--azul-principal);/* o el color que tengas */
+        border-radius: 0px; /* quitar bordes redondeados si molestan */
+        margin: 0;
+    }
+
+
+    /* TITULOS */
+    h2, h1, h3 {
+        color: var(--blanco);
+        text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    /* ==== IFRAME MAPA ==== */
+    iframe {
+        border: 2px solid var(--celeste);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+
+    /* ==== FOOTER ==== */
+    footer {
+        background: var(--azul-oscuro);
+        color: var(--blanco);
+        padding: 30px;
+        border-top: 4px solid var(--celeste);
+        text-align: center;
+    }
+
+    footer .fab {
+        color: var(--celeste);
+        transition: 0.2s;
+    }
+    footer .fab:hover {
+        color: var(--blanco);
+        transform: translateY(-5px);
+    }
+
+    /* ==== SWIPER ==== */
+    .swiper-container {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.3);
+    }
+
+    /* =========================
+   MEJORA DE DISEÑO GLOBAL
+   Pegar al final de tu estilo actual
+   ========================= */
+    [class*="flex-auto"].w-32 input[type="search"],
+    [class*="flex-auto"].w-32 .w-full,
+    [class*="flex-auto"].w-32 button {
+    transition: all .18s ease;
+    }
+
+    /* ----- BUSCADOR y BOTONES ----- */
+    [class*="flex-auto"].w-32 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    }
+
+    /* Input de búsqueda (más grande, borde suave, sombra) */
+    [class*="flex-auto"].w-32 input[type="search"] {
+    width: calc(100% - 160px); /* deja espacio para botones */
+    max-width: 520px;
+    min-width: 220px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: var(--blanco);
+    box-shadow: 0 6px 18px rgba(3,19,58,0.16);
+    outline: none;
+    }
+
+    /* Placeholder más suave */
+    [class*="flex-auto"].w-32 input[type="search"]::placeholder {
+    color: rgba(255,255,255,0.65);
+    }
+
+    /* Botón "buscar" */
+    [class*="flex-auto"].w-32 button.bg-\[hsl\(25\,95%\,53%\)\],
+    [class*="flex-auto"].w-32 button[wire\\:click] {
+    background: linear-gradient(90deg,var(--celeste), #ff8f3e);
+    color: #072C6B;
+    padding: 10px 18px;
+    border-radius: 12px;
+    box-shadow: 0 8px 22px rgba(11,79,216,0.12);
+    border: none;
+    font-weight: 700;
+    }
+
+    /* Botón Nuevo (rojo) */
+    [class*="flex-auto"].w-32 button.bg-\[\#db1b1b\],
+    [class*="flex-auto"].w-32 button[data-modal-toggle] {
+    background: linear-gradient(180deg,#d62828,#b81717);
+    color: var(--blanco);
+    border: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    }
+    [class*="flex-auto"].w-32 button:hover { transform: translateY(-3px); }
+
+    /* ----- SECCIÓN DE PRODUCTOS ----- */
+    /* Dirigimos al bloque con tu clase bg (compatibilidad con Tailwind-like classes) */
+    [class*="bg-[#e8e8eb]"],
+    .bg-\[\#e8e8eb\],
+    [class*="bg-\\[\\#e8e8eb\\]"] {
+    background: rgba(255,255,255,0.06); /* ligeramente translúcido para ver el azul detrás */
+    padding: 48px 24px;
+    border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(2,18,60,0.20);
+    margin: 28px auto;
+    max-width: 1180px;
+    }
+
+    /* Título dentro del bloque */
+    [class*="bg-[#e8e8eb]"] h2.text-6xl,
+    .bg-\[\#e8e8eb\] h2.text-6xl {
+    color: var(--blanco);
+    text-shadow: 0 8px 22px rgba(3,19,58,0.45);
+    font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+    margin-bottom: 8px;
+    }
+
+    /* Línea divisoria estilizada */
+    [class*="bg-[#e8e8eb]"] > .w-full.h-1,
+    .bg-\[\#e8e8eb\] > .w-full.h-1 {
+    height: 3px;
+    background: linear-gradient(90deg,var(--celeste), rgba(255,255,255,0.18));
+    opacity: .95;
+    margin: 12px auto 28px;
+    border-radius: 4px;
+    max-width: 95%;
+    }
+
+    /* Grid de productos: cards limpias */
+    .container.mx-auto.grid {
+    max-width: 1100px;
+    margin: 0 auto;
+    }
+
+    /* tarjeta producto */
+    .shadow-lg.rounded-lg.overflow-hidden {
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.98));
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(3,19,58,0.12);
+    border: 1px solid rgba(3,19,58,0.06);
+    transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    /* hover tarjeta */
+    .shadow-lg.rounded-lg.overflow-hidden:hover {
+    transform: translateY(-8px) scale(1.008);
+    box-shadow: 0 28px 60px rgba(3,19,58,0.18);
+    }
+
+    /* imagen producto */
+    .shadow-lg.rounded-lg.overflow-hidden img {
+    height: 220px;
+    width: 100%;
+    object-fit: cover;
+    display:block;
+    }
+
+    /* cuerpo de tarjeta */
+    .shadow-lg.rounded-lg.overflow-hidden .p-4 {
+    padding: 18px;
+    background: transparent;
+    }
+
+    /* nombre producto */
+    .shadow-lg.rounded-lg.overflow-hidden h3 {
+    color: #072C6B;
+    font-weight: 800;
+    letter-spacing: .4px;
+    margin-bottom: 8px;
+    }
+
+    /* descripcion */
+    .shadow-lg.rounded-lg.overflow-hidden p.text-gray-600,
+    .shadow-lg.rounded-lg.overflow-hidden p {
+    color: rgba(3,19,58,0.75);
+    font-size: .95rem;
+    min-height: 42px;
+    }
+
+    /* precio y categoria */
+    .shadow-lg.rounded-lg.overflow-hidden p.font-bold {
+    color: #0A3D91;
+    font-size: 1.05rem;
+    }
+    .shadow-lg.rounded-lg.overflow-hidden p.text-orange-500 {
+    color: #ff8f3e;
+    font-weight: 800;
+    }
+
+    /* botones dentro de tarjeta */
+    .shadow-lg.rounded-lg.overflow-hidden .flex > button {
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    }
+
+    /* estilos por tipo de rol (mantener colores) */
+    .shadow-lg.rounded-lg.overflow-hidden .bg-[#f97316],
+    .shadow-lg.rounded-lg.overflow-hidden button.bg-\[\\#f97316\\] {
+    background: linear-gradient(90deg,#ff9b59,#f97316);
+    color: white;
+    border: none;
+    }
+    .shadow-lg.rounded-lg.overflow-hidden .bg-blue-500,
+    .shadow-lg.rounded-lg.overflow-hidden button.bg-blue-500 {
+    background: linear-gradient(90deg,#0f52ba,#0a3d91);
+    color: white;
+    border: none;
+    }
+    .shadow-lg.rounded-lg.overflow-hidden .bg-red-500,
+    .shadow-lg.rounded-lg.overflow-hidden button.bg-red-500 {
+    background: linear-gradient(90deg,#d62828,#b71c1c);
+    color: white;
+    border: none;
+    }
+
+    /* botones a ancho completo en móviles */
+    @media (max-width: 768px) {
+    .shadow-lg.rounded-lg.overflow-hidden .flex > button { width: 100%; }
+    [class*="flex-auto"].w-32 input[type="search"] { width: 100%; max-width: none; }
+    }
+
+    /* ----- PAGINACIÓN ----- */
+    .pagination, .w-full > nav[role="navigation"], .w-full nav {
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin: 18px 0 6px;
+    }
+    .pagination a, .w-full nav a, .w-full nav span {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    color: var(--blanco);
+    border: 1px solid rgba(255,255,255,0.06);
+    }
+    .pagination a:hover { background: var(--celeste); color: #072C6B; transform: translateY(-2px); }
+
+    /* ----- MODALES ----- */
+    /* overlay */
+    .fixed.z-10.inset-0.overflow-y-auto,
+    .fixed.inset-0.bg-\[\#9b9b9b2d\] {
+    backdrop-filter: blur(3px);
+    }
+
+    /* modal dialog general */
+    .inline-block.align-bottom.bg-white,
+    .bg-\[\#ffffff\].p-6.rounded-lg {
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 36px 80px rgba(2,18,60,0.28);
+    }
+
+    /* cabeceras dentro de modal */
+    .inline-block.align-bottom.bg-white h3,
+    .bg-\[\#ffffff\].p-6.rounded-lg h3 {
+    color: #072C6B;
+    font-weight: 800;
+    }
+
+    /* botones dentro de modal: primary */
+    .bg-gray-50 .bg-blue-600,
+    button.bg-blue-600 {
+    background: linear-gradient(90deg,#0f52ba,#0a3d91);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: .6rem 1rem;
+    }
+
+    /* boton cancelar */
+    .bg-gray-50 button.bg-white,
+    button.bg-white {
+    border-radius: 10px;
+    border: 1px solid rgba(3,19,58,0.06);
+    color: #072C6B;
+    }
+
+    /* ----- pequeños ajustes visuales ----- */
+    a { text-decoration: none; }
+    img { display:block; }
+
+    /* === Imágenes de producto: aspecto limpio y consistente === */
+
+    /* Selector que coincide con tus tarjetas actuales */
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden img,
+    .product-card img {
+    display: block;
+    width: auto;               /* que no se estiren horizontalmente */
+    max-width: 100%;           /* no salen del contenedor */
+    height: 260px;            /* alto uniforme en desktop */
+    max-height: 320px;        /* tope por si la imagen es muy alta */
+    object-fit: contain;      /* muestra toda la imagen sin recortarla */
+    background: #f7fafc;      /* fondo suave detrás de la imagen */
+    padding: 18px;            /* espacio alrededor para que "respire" */
+    border-bottom: 1px solid rgba(3,19,58,0.04);
+    transition: transform .22s ease, box-shadow .22s ease;
+    margin: 0 auto;
+    box-shadow: 0 8px 20px rgba(3,19,58,0.06);
+    border-radius: 8px;
+    }
+
+    /* Efecto hover: ligero zoom (no exagerado) */
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden:hover img,
+    .product-card:hover img {
+    transform: scale(1.03);
+    box-shadow: 0 18px 40px rgba(3,19,58,0.10);
+    }
+
+    /* Versión responsiva para móviles: menos alto */
+    @media (max-width: 768px) {
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden img,
+    .product-card img {
+        height: 200px;
+        padding: 12px;
+    }
+    }
+
+    /* Si prefieres que las imágenes se recorten (llenando el área), cambiar object-fit a cover:
+    object-fit: cover;
+    y quitar padding si no quieres espacio interno.
+    */
+
+    /* === Preview de la imagen (en el modal/form) === */
+    img[src^="/storage/img/"],
+    img[alt="Preview"] {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin-top: 8px;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(3,19,58,0.06);
+    }
+
     </style>
     <header class="bg-[blue] font-bold">
         <div class="flex items-center justify-between">
             <!-- Logo a la izquierda -->
             <div class="flex-none w-20">
-                <img width="250" src="/img/pizzalogo.webp" class="logo">
+                <img width="250" src="/img/chiq.png" class="logo">
             </div>
     
             <!-- Título centrado -->
             <div class="flex-1 text-center">
-                <a class="Pizz text-white" href="{{route('home')}}">AMERICAN BURGUER</a>
+                <a   class="Pizz text-white text-6xl" href="{{route('home')}}">AMERICAN BURGUER</a>
             </div>
     
             <!-- Logo a la derecha -->
             <div class="flex-none w-20">
-                <img width="250" src="/img/pizzalogo.webp" class="logo">
+                <img width="250" src="/img/chiq.png" class="logo">
             </div>
         </div>
     </header>
@@ -117,11 +540,11 @@
         </iframe>
     </div>
 </body>
-<footer class="bg-[#ffbb2a] text-white py-10">
+<footer class="bg-[#253399] text-white py-10">
     <div class="redes">
     <!-- Íconos de redes sociales -->
         <div class="flex-auto" >
-            <a href="#" class="text-blue-500 hover:text-blue-400">
+            <a href="#" class="text-blue-700 hover:text-blue-400">
                 <i class="fab fa-facebook fa-2x"></i>
                 </a>
                 <a href="#" class="text-blue-400 hover:text-blue-300">

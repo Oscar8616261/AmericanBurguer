@@ -23,7 +23,7 @@
                     </div>
 
                     <div class="mt-3">
-                        <h3 class="font-medium">Detalles</h3>
+                        <h3 class="font-medium text-blue-700">Detalles</h3>
                         <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
                             @foreach($venta->detalles as $det)
                                 <div class="border p-2 rounded">
