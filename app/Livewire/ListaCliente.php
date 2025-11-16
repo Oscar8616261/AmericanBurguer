@@ -20,7 +20,7 @@ class ListaCliente extends Component
     public $nombre = '';
     public $apellidos = '';
     public $ci = '';
-    public $nit = '';
+    public $direccion = '';
     public $email = '';
     public $cliente_id='';
 
@@ -29,7 +29,7 @@ class ListaCliente extends Component
             'nombre' => 'required',
             'apellidos' => 'required|min:3',
             'ci' => 'required|min:3',
-            'nit' => 'required',
+            'direccion' => 'required',
             'email' => 'required|email',
         ];
         return $rules;
@@ -41,7 +41,7 @@ class ListaCliente extends Component
         $this->nombre = '';
         $this->apellidos = '';
         $this->ci = '';
-        $this->nit = '';
+        $this->direccion = '';
         $this->email = '';
         $this->cliente_id='';
     }
@@ -66,7 +66,7 @@ class ListaCliente extends Component
                 'nombre' => $this->nombre,
                 'apellidos' => $this->apellidos,
                 'ci' => $this->ci,
-                'nit' => $this->nit,
+                'direccion' => $this->direccion,
                 'email' => $this->email,
             ]);
         }else{
@@ -74,7 +74,7 @@ class ListaCliente extends Component
                 'nombre' => $this->nombre,
                 'apellidos' => $this->apellidos,
                 'ci' => $this->ci,
-                'nit' => $this->nit,
+                'direccion' => $this->direccion,
                 'email' => $this->email,
             ]);
         }
@@ -87,7 +87,7 @@ class ListaCliente extends Component
         $this->nombre = $cliente->nombre;
         $this->apellidos = $cliente->apellidos;
         $this->ci = $cliente->ci;
-        $this->nit = $cliente->nit;
+        $this->direccion = $cliente->direccion;
         $this->email = $cliente->email;
         $this->cliente_id = $id;
         $this->openModal();

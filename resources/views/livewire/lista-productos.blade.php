@@ -33,7 +33,8 @@
                 
                         <p class="text-gray-600">{{$item->descripcion}}</p>
                 
-                        <p class="font-bold text-lg mt-2">Bs {{$item->precio}}</p>
+                        <p class="font-bold text-lg mt-2">Bs {{ $item->precio_mostrar ?? $item->precio }}</p>
+
                         <p class="text-orange-500 font-bold text-lg">{{$item->categoria->nombre}}</p>
                 
                         <div class="flex space-x-2 mt-4">
@@ -42,8 +43,35 @@
                             @endauth
                            
                             @auth('web')
-                            <button wire:click.prevent="editar({{$item->id_producto}})" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">Editar</button>
-                            <button wire:click.prevent="delete({{$item->id_producto}})" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full">Eliminar</button>
+                            <div class="flex space-x-2 mt-4">
+                                @auth('clientes')
+                                    <button wire:click.prevent="calificar({{$item->id_producto}})"
+                                            class="bg-[#f97316] text-white px-4 py-2 rounded hover:bg-[#ff8f3e] w-full">
+                                        Calificar
+                                    </button>
+                                @endauth
+
+                                @auth('web')
+                                    <button wire:click.prevent="editar({{$item->id_producto}})"
+                                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
+                                        Editar
+                                    </button>
+
+                                    <!-- Aumentar stock (por defecto +1 unidad). -->
+                                    <button wire:click.prevent="openIncreaseModal({{$item->id_producto}})" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
+                                        Aumentar stock
+                                    </button>
+
+                                    <!-- Botón Oferta (solo administrador) -->
+                                    <button wire:click.prevent="openOfertaModal({{ $item->id_producto }})"
+                                            class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">
+                                        Oferta
+                                    </button>
+
+
+                                @endauth
+                            </div>
+
                             @endauth
                         </div>
                     </div>
@@ -115,7 +143,7 @@
         <div class="fixed inset-0 bg-[#9b9b9b2d] bg-opacity-75 flex items-center justify-center z-50">
             <div class="bg-[#ffffff] p-6 rounded-lg w-96">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-semibold">Detalles del Producto</h2>
+                    <h2 class="text-blue-700 font-semibold">Detalles del Producto</h2>
                     <button wire:click="closeModal" class="text-gray-600 hover:text-gray-900">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -141,6 +169,19 @@
                     <span class="text-red-500 text-xs">{{ $message }}</span>
                 @enderror
             </div>
+            @if ($producto_id)
+                <div class="mb-4">
+                    <label for="status" class="block mb-2 text-sm font-medium text-gray-900">Estado</label>
+                    <select wire:model="status" id="status" class="w-full p-2 border rounded text-blue-700">
+                        <option value="{{ \App\Models\ProductoModel::STATUS_DISPONIBLE }}">Disponible</option>
+                        <option value="{{ \App\Models\ProductoModel::STATUS_OFERTA }}">Oferta</option>
+                        <option value="{{ \App\Models\ProductoModel::STATUS_FUERA }}">Fuera de stock</option>
+                        <option value="{{ \App\Models\ProductoModel::STATUS_BAJA }}">Baja</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Puedes cambiar el estado manualmente o dejar que el sistema lo ajuste según stock/oferta.</p>
+                </div>
+            @endif
+
             <!-- Precio -->
             <div class="relative z-0 w-full mb-5 group">
                 <input wire:model="precio" type="text" name="floating_precio" id="floating_precio" class="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer" placeholder=" " required />
@@ -205,5 +246,57 @@
 
         @endif
     </div>
+        <!-- Modal: Aumentar stock -->
+    @if($showIncreaseModal)
+        <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-96">
+                <h3 class="text-blue-700 font-semibold mb-4">Aumentar stock</h3>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700">Cantidad a aumentar</label>
+                    <input type="number" min="1" wire:model.defer="increaseAmount" class="w-full p-2 border rounded text-blue-700" />
+                    @error('increaseAmount') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button wire:click="increaseStockConfirm" class="bg-green-600 text-white px-4 py-2 rounded">Confirmar</button>
+                    <button wire:click="$set('showIncreaseModal', false)" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    @endif
+    <!-- Modal Oferta -->
+    @if($showOfertaModal)
+    <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="text-blue-700 font-semibold mb-4">Asignar Oferta al Producto</h3>
+
+        <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700">Selecciona una oferta</label>
+        <select wire:model="ofertaId" wire:change="calcularPrecio" class="w-full p-2 border rounded text-blue-700">
+            <option value="">-- Seleccione --</option>
+            @foreach($ofertas as $of)
+            <option value="{{ $of->id_oferta }}">
+                {{ $of->nombre }} — {{ $of->descuento }}% ({{ \Carbon\Carbon::parse($of->fecha_ini)->format('d/m/Y') }} → {{ \Carbon\Carbon::parse($of->fecha_fin)->format('d/m/Y') }})
+            </option>
+            @endforeach
+        </select>
+        @error('ofertaId') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+        </div>
+
+        @if($precio_final !== null)
+        <div class="mb-3">
+            <p class="text-sm font-medium">Precio final con oferta: <span class="font-bold">Bs {{ $precio_final }}</span></p>
+        </div>
+        @endif
+
+        <div class="flex justify-end space-x-2 mt-4">
+        <button wire:click="guardarDetalleOferta" class="bg-green-600 text-white px-4 py-2 rounded">Guardar</button>
+        <button wire:click="$set('showOfertaModal', false)" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+        </div>
+    </div>
+    </div>
+    @endif
+
 </div>
 

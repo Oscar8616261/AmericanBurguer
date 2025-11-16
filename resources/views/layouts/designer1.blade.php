@@ -21,6 +21,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
+    @php
+        // contador de pendientes (consulta simple en la vista)
+        $pendientes = \App\Models\VentaModel::where('status', 'pendiente')->count();
+    @endphp
+
     <style>
         /* ==== PALETA PROFESIONAL ==== */
     :root {
@@ -452,22 +457,181 @@
     box-shadow: 0 8px 20px rgba(3,19,58,0.06);
     }
 
+    /* ======= OVERRIDES PARA TARJETAS: quitar huecos entre nombre / estrellas / descripción / precio / categoría ======= */
+
+    /* Menos padding en el cuerpo de la tarjeta para compactar todo */
+    .shadow-lg.rounded-lg.overflow-hidden .p-4 {
+    padding: 12px !important;
+    }
+
+    /* Nombre: pequeño gap debajo */
+    .shadow-lg.rounded-lg.overflow-hidden h3 {
+    margin: 0 0 4px 0 !important;
+    line-height: 1.05 !important;
+    }
+
+    /* Quitar márgenes por defecto en TODOS los párrafos dentro de la tarjeta */
+    .shadow-lg.rounded-lg.overflow-hidden p {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.12 !important;
+    }
+
+    /* Descripción: permitir hasta 2 líneas pero sin huecos (quita min-height si existe) */
+    .shadow-lg.rounded-lg.overflow-hidden p.text-gray-600,
+    .shadow-lg.rounded-lg.overflow-hidden p.description {
+    margin-bottom: 6px !important;
+    min-height: 0 !important;
+    line-height: 1.15 !important;
+    font-size: .95rem;
+    }
+
+    /* Precio y categoría: forzar que estén pegados (sin margen) y con line-height compacto */
+    .shadow-lg.rounded-lg.overflow-hidden p.font-bold,
+    .shadow-lg.rounded-lg.overflow-hidden p.text-orange-500 {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    }
+
+    /* Si usas <div> para agrupar precio/categoría, asegúrate que no tenga gap grande */
+    .shadow-lg.rounded-lg.overflow-hidden .price-category,
+    .shadow-lg.rounded-lg.overflow-hidden .flex-col-no-gap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px; /* pequeño espacio entre precio y categoría */
+    margin-top: 6px;
+    }
+
+    /* Imagen: reducir un poco la altura para dar más espacio al contenido */
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden img,
+    .shadow-lg.rounded-lg.overflow-hidden img,
+    .product-card img {
+    height: 200px !important;
+    padding: 12px !important;
+    object-fit: contain !important;
+    }
+
+    /* Botones: mantener separación pero sin empujar el contenido */
+    .shadow-lg.rounded-lg.overflow-hidden .mt-3 {
+    margin-top: 8px !important;
+    }
+
+    /* Responsive: aún más compacto en móvil */
+    @media (max-width: 768px) {
+    .shadow-lg.rounded-lg.overflow-hidden img { height: 160px !important; padding: 10px !important; }
+    .shadow-lg.rounded-lg.overflow-hidden .p-4 { padding: 10px !important; }
+    .shadow-lg.rounded-lg.overflow-hidden h3 { font-size: 1rem; }
+    }
+    /* ====== OVERRIDE FINAL: eliminar ese hueco que queda abajo ====== */
+
+    /* Hacer el contenido de la tarjeta un column flex para controlar gaps */
+    .shadow-lg.rounded-lg.overflow-hidden .p-4 {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px !important;          /* pequeño espacio entre bloques */
+    padding: 12px !important;
+    min-height: 0 !important;
+    }
+
+    /* Eliminar cualquier min-height/margen de párrafos dentro */
+    .shadow-lg.rounded-lg.overflow-hidden p {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.12 !important;
+    min-height: 0 !important;
+    }
+
+    /* Si hay un párrafo de descripción muy largo, limitar a 2 líneas (evita empujar abajo) */
+    .shadow-lg.rounded-lg.overflow-hidden p.text-gray-600 {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    /* Forzar que precio y categoría estén juntos (sin gaps extra) */
+    .shadow-lg.rounded-lg.overflow-hidden p.font-bold,
+    .shadow-lg.rounded-lg.overflow-hidden p.text-orange-500 {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    }
+
+    /* Si el precio está en un <p> seguido de la categoría, asegurar separación mínima */
+    .shadow-lg.rounded-lg.overflow-hidden p.font-bold + p {
+    margin-top: 2px !important;
+    }
+
+    /* Reducir padding de imagen (si el padding de la imagen empuja contenido) */
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden img,
+    .shadow-lg.rounded-lg.overflow-hidden img {
+    padding: 10px !important;
+    height: 180px !important;
+    object-fit: contain !important;
+    }
+
+    /* Asegurar que el área inferior de la tarjeta no tenga padding extra */
+    .shadow-lg.rounded-lg.overflow-hidden {
+    padding-bottom: 12px !important;
+    }
+
+    /* Móvil: aún más compacto */
+    @media (max-width:768px) {
+    .bg-white.shadow-lg.rounded-lg.overflow-hidden img { height: 140px !important; padding: 8px !important; }
+    .shadow-lg.rounded-lg.overflow-hidden .p-4 { padding: 10px !important; gap: 6px !important; }
+    }
+    /* ====== AÑADIR ESPACIO ARRIBA DE LA IMAGEN ====== */
+    .shadow-lg.rounded-lg.overflow-hidden img {
+        margin-top: 12px !important;   /* espacio arriba */
+        margin-bottom: 12px !important;/* espacio abajo (ya lo tienes, lo igualo) */
+        display: block;
+    }
+
+    /* ====== ESTILOS PARA EL BADGE DE PENDIENTES (añadidos) ====== */
+    .pendientes-wrapper { position: relative; display: inline-block; }
+    .pendientes-badge {
+        position: absolute;
+        top: -10px;
+        right: -8px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: white;
+        background: #ef4444;
+        border-radius: 999px;
+        box-shadow: 0 4px 8px rgba(0,0,0,.25);
+        border: 2px solid rgba(255,255,255,0.12);
+        z-index:50;
+        line-height: 1;
+    }
+    @media (max-width:640px) {
+        .pendientes-badge{ top:-8px; right:-6px; min-width:18px; height:18px; font-size:10px; }
+    }
+
     </style>
+
     <header class="bg-[blue] font-bold">
         <div class="flex items-center justify-between">
             <!-- Logo a la izquierda -->
             <div class="flex-none w-20">
-                <img width="250" src="/img/chiq.png" class="logo">
+                <img width="250" src="/img/chiq.png" class="logo" alt="logo-izq">
             </div>
     
             <!-- Título centrado -->
             <div class="flex-1 text-center">
-                <a   class="Pizz text-white text-6xl" href="{{route('home')}}">AMERICAN BURGUER</a>
+                <a class="Pizz text-white text-6xl" href="{{route('home')}}">AMERICAN BURGUER</a>
             </div>
     
             <!-- Logo a la derecha -->
             <div class="flex-none w-20">
-                <img width="250" src="/img/chiq.png" class="logo">
+                <img width="250" src="/img/chiq.png" class="logo" alt="logo-der">
             </div>
         </div>
     </header>
@@ -478,7 +642,7 @@
         
         <div class="flex-auto w-64 ...">
             <div class="menu">
-                <nav class="flex justify-center space-x-1">
+                <nav class="flex justify-center space-x-1 items-center">
                     <a href="{{route('ofertas.index')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">OFERTAS</a>
                     <a href="{{route('categoria.listar')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">CATEGORÍAS</a>
 
@@ -491,7 +655,17 @@
                         <a href="{{route('usuarios.index')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">USUARIOS</a>
                         <a href="{{route('empresa.listar')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">EMPRESA</a>
                         <a href="{{route('producto.create')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">PRODUCTOS</a>
-                        <a href="{{route('pendientes.index')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">PENDIENTES</a>
+
+                        <!-- PENDIENTES: envuelto para poder posicionar badge -->
+                        <div class="pendientes-wrapper" aria-hidden="false" style="display:inline-block;">
+                            <a href="{{route('pendientes.index')}}" class="bg-[#f97316] font-bold px-3 py-2 text-slate-700 rounded-lg hover:bg-slate-100 hover:text-slate-900">PENDIENTES</a>
+
+                            @if($pendientes > 0)
+                                <span class="pendientes-badge" title="{{ $pendientes }} ventas pendientes" aria-label="{{ $pendientes }} ventas pendientes">
+                                    {{ $pendientes > 9 ? '9+' : $pendientes }}
+                                </span>
+                            @endif
+                        </div>
                     @endauth
             
                     @if (!Auth::guard('web')->check() && !Auth::guard('clientes')->check())
@@ -501,16 +675,16 @@
         
                     @auth('web')
                         <!-- Solo mostrar si el usuario está autenticado -->
-                        <p class="text-black font-bold">Bienvenido, {{ Auth::guard('web')->user()->nombre }}</p>
-                        <form action="{{ route('logout') }}" method="POST" class="inline">
+                        <p class="text-black font-bold ml-3">Bienvenido, {{ Auth::guard('web')->user()->nombre }}</p>
+                        <form action="{{ route('logout') }}" method="POST" class="inline ml-3">
                             @csrf
                             <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700">Cerrar sesión</button>
                         </form>
                     @endauth
                     @auth('clientes')
                         <!-- Solo mostrar si el cliente está autenticado -->
-                        <p class="text-black font-bold">Bienvenido, {{ Auth::guard('clientes')->user()->nombre }}</p>
-                        <form action="{{ route('logout') }}" method="POST" class="inline">
+                        <p class="text-black font-bold ml-3">Bienvenido, {{ Auth::guard('clientes')->user()->nombre }}</p>
+                        <form action="{{ route('logout') }}" method="POST" class="inline ml-3">
                             @csrf
                             <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700">Cerrar sesión</button>
                         </form>

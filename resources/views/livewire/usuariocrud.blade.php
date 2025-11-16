@@ -93,7 +93,7 @@
   <div class="fixed inset-0 bg-[#9b9b9b2d] bg-opacity-75 flex items-center justify-center z-50">
     <div class="inline-block align-bottom bg-white p-6 rounded-lg w-96">
       <div class="flex justify-between items-center">
-        <h2 class="text-xl font-semibold">Datos del Usuario</h2>
+        <h2 class="text-blue-700 font-semibold">Datos del Usuario</h2>
         <button wire:click="closeModal" class="text-gray-600 hover:text-gray-900">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

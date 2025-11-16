@@ -1,56 +1,67 @@
-<div class="bg-[#e8e8eb] py-10">
-  <h2 class="text-6xl font-bold text-center mb-8">NUEVO CLIENTE</h2>
+<div>
+    @if($showModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+            <!-- overlay -->
+            <div class="absolute inset-0 bg-black opacity-50" wire:click="closeModal"></div>
 
-  <div class="max-w-md mx-auto shadow-lg rounded-lg overflow-hidden bg-white p-6">
-    <!-- Nombre -->
-    <div class="mb-4">
-      <label for="nombre" class="block mb-2 text-sm font-medium text-gray-900">Nombre</label>
-      <input wire:model="nombre" id="nombre" name="nombre" type="text" placeholder="Nombre"
-             class="block w-full px-4 py-2 text-sm rounded-lg border border-gray-300 bg-transparent focus:outline-none focus:border-blue-600 peer" required />
-    </div>
+            <!-- modal -->
+            <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 z-50 overflow-hidden">
+                <div class="p-4 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-800">Registro de Cliente</h3>
+                    <button wire:click="closeModal" class="text-gray-600 hover:text-gray-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
 
-    <!-- Apellidos -->
-    <div class="mb-4">
-      <label for="apellidos" class="block mb-2 text-sm font-medium text-gray-900">Apellidos</label>
-      <input wire:model="apellidos" id="apellidos" name="apellidos" type="text" placeholder="Apellidos"
-             class="block w-full px-4 py-2 text-sm rounded-lg border border-gray-300 bg-transparent focus:outline-none focus:border-blue-600 peer" required />
-    </div>
+                <div class="p-4">
+                    <form wire:submit.prevent="enviarClick" novalidate>
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-700">Nombre</label>
+                            <input type="text" wire:model.defer="nombre" class="w-full border rounded px-3 py-2" />
+                            @error('nombre') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                        </div>
 
-    <!-- CI -->
-    <div class="mb-4">
-      <label for="ci" class="block mb-2 text-sm font-medium text-gray-900">CI</label>
-      <input wire:model="ci" id="ci" name="ci" type="text" placeholder="CI"
-             class="block w-full px-4 py-2 text-sm rounded-lg border border-gray-300 bg-transparent focus:outline-none focus:border-blue-600 peer" required />
-    </div>
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-700">Apellidos</label>
+                            <input type="text" wire:model.defer="apellidos" class="w-full border rounded px-3 py-2" />
+                            @error('apellidos') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                        </div>
 
-    <!-- NIT -->
-    <div class="mb-4">
-      <label for="nit" class="block mb-2 text-sm font-medium text-gray-900">NIT</label>
-      <input wire:model="nit" id="nit" name="nit" type="text" placeholder="NIT"
-             class="block w-full px-4 py-2 text-sm rounded-lg border border-gray-300 bg-transparent focus:outline-none focus:border-blue-600 peer" required />
-    </div>
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-700">Cédula de Identidad (CI)</label>
+                            <input type="text" wire:model.defer="ci" class="w-full border rounded px-3 py-2" />
+                            @error('ci') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                        </div>
 
-    <!-- Email -->
-    <div class="mb-6">
-      <label for="email" class="block mb-2 text-sm font-medium text-gray-900">Email</label>
-      <input wire:model="email" id="email" name="email" type="email" placeholder="Email"
-             class="block w-full px-4 py-2 text-sm rounded-lg border border-gray-300 bg-transparent focus:outline-none focus:border-blue-600 peer" required />
-    </div>
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-700">Dirección</label>
+                            <input type="text" wire:model.defer="direccion" class="w-full border rounded px-3 py-2" />
+                            @error('direccion') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                        </div>
 
-    <!-- Botones -->
-    <div class="flex gap-3">
-      <button wire:click="enviarClick()" type="button"
-              class="flex-1 text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 shadow-sm">
-        Enviar
-      </button>
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-700">Correo Electrónico</label>
+                            <input type="email" wire:model.defer="email" class="w-full border rounded px-3 py-2" />
+                            @error('email') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                        </div>
 
-      <a href="{{ route('cliente.listar') }}"
-         class="flex-1 text-white bg-[#db1b1b] hover:bg-orange-600 font-medium rounded-lg text-sm px-5 py-2.5 text-center shadow-sm">
-        Cancelar
-      </a>
-    </div>
-  </div>
+                        <div class="flex justify-end space-x-2">
+                            <button type="button" wire:click="closeModal" class="px-4 py-2 rounded border hover:bg-gray-50">Cancelar</button>
+                            <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Registrarme</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
 
-  <!-- línea inferior -->
-  <div class="w-full h-1 mx-auto bg-[#000000] rounded opacity-70 mt-8" style="max-width:95%;"></div>
+        <!-- Listener JS simple para mostrar notificaciones del componente -->
+        <script>
+            window.addEventListener('notify', event => {
+                // Puedes cambiar alert por una toast personalizada si quieres
+                alert(event.detail.message);
+            });
+        </script>
+    @endif
 </div>

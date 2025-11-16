@@ -12,7 +12,7 @@ class ClienteModel extends Authenticatable
 {
     use Notifiable;
     protected $table = 'Cliente';
-    protected $fillable = ['nombre','apellidos','ci','nit','email'];
+    protected $fillable = ['nombre','apellidos','ci','direccion','email'];
     protected $primaryKey = 'id_cliente';
     public function isCliente()
     {

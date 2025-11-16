@@ -9,6 +9,8 @@ use App\Models\ClienteModel;
 use App\Models\TipoPagoModel;
 use App\Models\VentaModel;
 use App\Models\DetalleVentaModel;
+use App\Models\DetalleOfertaModel;
+use App\Models\EstrellasModel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
@@ -17,6 +19,7 @@ class Ventascrud extends Component
 {
     use LivewireAlert;
 
+    // filtros y colecciones
     public $id_categoria = 1;
     public $productos = [];
     public $searchProducto = '';
@@ -25,44 +28,65 @@ class Ventascrud extends Component
     public $searchCliente = '';
     public $clientes = [];
 
+    // datos cliente
     public $ciCliente;
     public $clienteId;
     public $nombre;
     public $apellidos;
-    public $nit;
+    public $direccion;
 
-    public $tipoPago = "Efectivo";
-    public $tipoPagoId;
+    // pago
+    public $tipoPago = ''; // nombre (opcional)
+    public $tipoPagoId = null; // id_pago utilizado en DB
+    public $efectivoId = null; // id pago correspondiente a "Efectivo" (si existe)
     public $montoRecibido = 0; // Monto recibido
     public $cambio = 0;
     public $tiposPago;
 
-    // NUEVO: lista de administradores y admin seleccionado (cuando cliente está logueado)
+    // administradores (cuando cliente hace pedido)
     public $admins = [];
     public $selectedAdminId = null;
 
-    // INDICADORES del guard (útil en la vista y lógica)
+    // indicadores guard
     public $isAdmin = false;
     public $isCliente = false;
 
+    // vistas: categoria | ofertas | destacados
+    public $viewMode = 'categoria';
+    public $limitDestacados = 6; // mostrar 6 destacados por defecto
+
     public function mount()
     {
-        $this->tiposPago = TipoPagoModel::all();
-        $this->tipoPagoId = TipoPagoModel::where('nombre', 'Efectivo')->value('id_pago');
+        // Cargar tipos de pago filtrando nombres nulos
+        $this->tiposPago = TipoPagoModel::whereNotNull('nombre')->get();
 
-        // Determinar guard activo
+        // buscar id de "Efectivo" (insensible a mayúsculas)
+        $this->efectivoId = TipoPagoModel::whereRaw("LOWER(nombre) LIKE ?", ['%efectivo%'])->value('id_pago');
+
+        // si existe efectivo, seleccionarlo por defecto; si no, toma el primer tipo si hay
+        if ($this->efectivoId) {
+            $this->tipoPagoId = $this->efectivoId;
+            $this->tipoPago = TipoPagoModel::where('id_pago', $this->efectivoId)->value('nombre') ?? 'Efectivo';
+        } elseif ($this->tiposPago->count() > 0) {
+            $first = $this->tiposPago->first();
+            $this->tipoPagoId = $first->id_pago;
+            $this->tipoPago = $first->nombre;
+        } else {
+            $this->tipoPagoId = null;
+            $this->tipoPago = '';
+        }
+
+        // Guard check
         $this->isAdmin = Auth::guard('web')->check();
         $this->isCliente = Auth::guard('clientes')->check();
 
-        // Cargar administradores desde la tabla Usuario (ajusta columnas si tu tabla difiere)
-        // Usamos DB para no depender de un model Usuario existente.
+        // Cargar administradores desde la tabla Usuario (ajusta si es necesario)
         $this->admins = DB::table('Usuario')
             ->select('id_usuario', DB::raw("CONCAT(COALESCE(nombre,''),' ',COALESCE(apellidos,'')) as full_name"))
             ->orderBy('id_usuario')
             ->get()
             ->toArray();
 
-        // Si el usuario es cliente autenticado, por defecto podemos preseleccionar admin 1 (opcional)
         if ($this->isCliente) {
             $this->selectedAdminId = $this->admins && count($this->admins) ? ($this->admins[0]->id_usuario ?? 1) : 1;
         }
@@ -70,13 +94,147 @@ class Ventascrud extends Component
 
     public function render()
     {
+        // Cargar categorías
         $categorias = CategoriaModel::all();
-        $this->productos = ProductoModel::where('id_categoria', $this->id_categoria)
-            ->where('nombre', 'like', '%' . $this->searchProducto . '%')
-            ->get();
+
+        // Diferentes modos: categoria | ofertas | destacados
+        if ($this->viewMode === 'ofertas') {
+            // Detalles de oferta activas
+            $detalles = DetalleOfertaModel::whereHas('oferta', function ($q) {
+                    $q->whereDate('fecha_ini', '<=', now())
+                      ->whereDate('fecha_fin', '>=', now());
+                })->get();
+
+            // Mapear a productos (usando ProductoModel::find para compatibilidad)
+            $this->productos = $detalles->map(function ($detalle) {
+                $producto = ProductoModel::find($detalle->id_producto);
+                if (!$producto) return null;
+
+                // promedio de estrellas
+                $avg = EstrellasModel::where('id_producto', $producto->id_producto)->avg('puntuacion');
+                $producto->promedio_estrellas = $avg ? round($avg) : 0;
+
+                $producto->precio_mostrar = $detalle->precio_final;
+                $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                return $producto;
+            })->filter()->values();
+
+        } elseif ($this->viewMode === 'destacados') {
+            // Obtener ids top por promedio de estrellas
+            $topIds = EstrellasModel::select('id_producto', DB::raw('AVG(puntuacion) as avg_puntuacion'))
+                ->groupBy('id_producto')
+                ->orderByDesc('avg_puntuacion')
+                ->limit($this->limitDestacados)
+                ->pluck('id_producto')
+                ->toArray();
+
+            // traer productos y ordenar por ranking
+            $productosQuery = ProductoModel::whereIn('id_producto', $topIds)
+                ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja')
+                ->get()
+                ->keyBy('id_producto');
+
+            $ordered = collect($topIds)->map(function ($id) use ($productosQuery) {
+                return $productosQuery->get($id);
+            })->filter()->values();
+
+            // calcular precio_mostrar / status y promedio estrellas
+            $this->productos = $ordered->map(function ($producto) {
+                if (!$producto) return null;
+
+                $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
+                    ->whereHas('oferta', function ($q) {
+                        $q->whereDate('fecha_ini', '<=', now())
+                          ->whereDate('fecha_fin', '>=', now());
+                    })->first();
+
+                if ($detalle) {
+                    $producto->precio_mostrar = $detalle->precio_final;
+                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                } else {
+                    $producto->precio_mostrar = $producto->precio;
+                    $producto->status = $producto->stock <= 0 ? (ProductoModel::STATUS_FUERA ?? 'fuera') : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
+                }
+
+                // promedio de estrellas
+                $avg = EstrellasModel::where('id_producto', $producto->id_producto)->avg('puntuacion');
+                $producto->promedio_estrellas = $avg ? round($avg) : 0;
+
+                return $producto;
+            })->filter()->values();
+
+        } else {
+            // Modo por categoría (comportamiento original)
+            $categoriaId = $this->id_categoria ?? 1;
+            $query = ProductoModel::when($categoriaId, function ($q) use ($categoriaId) {
+                    return $q->where('id_categoria', $categoriaId);
+                })
+                ->where('nombre', 'like', '%' . $this->searchProducto . '%')
+                ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja')
+                ->orderBy('nombre');
+
+            $this->productos = $query->get()->map(function ($producto) {
+
+                // promedio estrellas
+                try {
+                    $puntuaciones = EstrellasModel::where('id_producto', $producto->id_producto)->pluck('puntuacion');
+                    $producto->promedio_estrellas = $puntuaciones->count() > 0 ? round($puntuaciones->avg()) : 0;
+                } catch (\Throwable $e) {
+                    $producto->promedio_estrellas = 0;
+                }
+
+                // buscar oferta activa para este producto
+                $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
+                    ->whereHas('oferta', function ($q) {
+                        $q->whereDate('fecha_ini', '<=', now())
+                            ->whereDate('fecha_fin', '>=', now());
+                    })->first();
+
+                if ($detalle) {
+                    $producto->precio_mostrar = $detalle->precio_final;
+                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                } else {
+                    $producto->precio_mostrar = $producto->precio;
+
+                    if ($producto->status !== (ProductoModel::STATUS_BAJA ?? 'baja')) {
+                        if ($producto->stock <= 0) {
+                            $producto->status = ProductoModel::STATUS_FUERA ?? 'fuera';
+                        } else {
+                            $producto->status = ProductoModel::STATUS_DISPONIBLE ?? 'disponible';
+                        }
+                    }
+                }
+
+                return $producto;
+            });
+        }
 
         return view('livewire.ventascrud', compact('categorias'));
     }
+
+    /********** Métodos para cambio de vista **********/
+    public function showCategoria()
+    {
+        $this->viewMode = 'categoria';
+        $this->searchProducto = '';
+        $this->id_categoria = $this->id_categoria ?? 1;
+    }
+
+    public function showOfertas()
+    {
+        $this->viewMode = 'ofertas';
+        $this->searchProducto = '';
+        $this->id_categoria = null;
+    }
+
+    public function showDestacados()
+    {
+        $this->viewMode = 'destacados';
+        $this->searchProducto = '';
+        $this->id_categoria = null;
+    }
+
+    /****************************************************/
 
     public function guardar()
     {
@@ -91,25 +249,36 @@ class Ventascrud extends Component
         // Calcular total actualizado
         $this->total = $this->calcularTotal();
 
+        // Validaciones adicionales
+        $rules = [];
+
+        if ($this->isAdmin) {
+            $rules['clienteId'] = 'required';
+            $rules['tipoPagoId'] = 'required';
+            // Si es efectivo, monto recibido debe ser >= 0 (puedes ajustar min si quieres)
+            if ($this->tipoPagoId && $this->tipoPagoId == $this->efectivoId) {
+                $rules['montoRecibido'] = ['required', 'numeric', 'min:0'];
+            }
+            $this->validate($rules);
+        } elseif ($this->isCliente) {
+            $rules['tipoPagoId'] = 'required';
+            $this->validate($rules);
+        } else {
+            $this->alert('error', 'No hay usuario autenticado.');
+            return;
+        }
+
         $venta = new VentaModel();
         $venta->fecha_venta = now();
         $venta->total = $this->total;
+        $venta->id_pago = $this->tipoPagoId ?? null;
 
-        // Diferenciar según el guard autenticado
-        if (Auth::guard('web')->check()) {
-            // Administrador -> venta confirmada y descuenta stock
-            $this->validate([
-                'clienteId' => 'required',
-                'montoRecibido' => 'required',
-            ], [
-                'clienteId.required' => 'Selecciona un cliente para la venta.',
-                'montoRecibido.required' => 'Ingrese el monto recibido.',
-            ]);
+        // ADMIN
+        if ($this->isAdmin) {
 
             $venta->status = 'confirmado';
             $venta->id_usuario = Auth::guard('web')->id();
             $venta->id_cliente = $this->clienteId;
-            $venta->id_pago = $this->tipoPagoId ?? null;
 
             $venta->save();
 
@@ -120,92 +289,113 @@ class Ventascrud extends Component
                 $detalle->id_producto = $item['id_producto'];
                 $detalle->cantidad = $item['cantidad'];
                 $detalle->precio = $item['precio'];
-                $detalle->efectivo = $this->montoRecibido;
-                $detalle->cambio = $this->cambio;
+                $detalle->efectivo = $this->tipoPagoId == $this->efectivoId ? $this->montoRecibido : 0;
+                $detalle->cambio = $this->tipoPagoId == $this->efectivoId ? $this->cambio : 0;
                 $detalle->save();
 
-                // Reducir stock (solo en ventas confirmadas)
+                // Reducir stock y actualizar estado
                 $producto = ProductoModel::find($item['id_producto']);
+
                 if ($producto) {
                     $producto->stock = max(0, $producto->stock - $item['cantidad']);
                     $producto->save();
+
+                    if (method_exists($producto, 'updateStatusByStockAndOffer')) {
+                        $producto->updateStatusByStockAndOffer();
+                    } else {
+                        if ($producto->stock <= 0) {
+                            $producto->status = ProductoModel::STATUS_FUERA ?? 'fuera';
+                        } else {
+                            $producto->status = ProductoModel::STATUS_DISPONIBLE ?? 'disponible';
+                        }
+                        $producto->save();
+                    }
                 }
             }
 
-            // Limpiar campos relevantes
+            // Reset props relevantes (AHORA INCLUYE ciCliente)
             $this->reset([
                 'carrito',
                 'total',
                 'clienteId',
                 'nombre',
                 'apellidos',
-                'nit',
-                'ciCliente',
+                'direccion',
+                'ciCliente',      // <--- limpiamos el CI aquí
                 'montoRecibido',
                 'cambio',
             ]);
 
             $this->alert('success', 'Venta confirmada y guardada con éxito.');
+        }
+        // CLIENTE
+        elseif ($this->isCliente) {
 
-        } elseif (Auth::guard('clientes')->check()) {
-            // Cliente autenticado -> crear pedido en estado 'pendiente', no descontar stock
             $venta->status = 'pendiente';
-
-            // Asignar admin elegido por el cliente o fallback a 1
             $venta->id_usuario = $this->selectedAdminId ?? 1;
-
             $venta->id_cliente = Auth::guard('clientes')->id();
-            $venta->id_pago = $this->tipoPagoId ?? null;
 
             $venta->save();
 
-            // Guardar detalles sin tocar stock
             foreach ($this->carrito as $item) {
                 $detalle = new DetalleVentaModel();
                 $detalle->id_venta = $venta->id_venta;
                 $detalle->id_producto = $item['id_producto'];
                 $detalle->cantidad = $item['cantidad'];
                 $detalle->precio = $item['precio'];
-                $detalle->efectivo = $this->montoRecibido;
-                $detalle->cambio = $this->cambio;
+                $detalle->efectivo = $this->tipoPagoId == $this->efectivoId ? $this->montoRecibido : 0;
+                $detalle->cambio = $this->tipoPagoId == $this->efectivoId ? $this->cambio : 0;
                 $detalle->save();
             }
 
-            // Reset del carrito y montos; no reseteo datos de sesión del cliente
+            // Reset props relevantes (INCLUYE ciCliente por si acaso)
             $this->reset([
                 'carrito',
                 'total',
                 'montoRecibido',
                 'cambio',
+                'ciCliente',      // <--- limpiamos el CI también en el flujo cliente
             ]);
 
             $this->alert('success', 'Pedido creado y guardado como PENDIENTE.');
-        } else {
-            // Ningún guard válido: rechazo
-            $this->alert('error', 'No hay usuario autenticado (ni admin ni cliente).');
-            return;
         }
     }
 
-    // Resto de métodos (calculoCambio, updatedTipoPago, buscarCliente, etc.) quedan igual
+    // calcular cambio según monto recibido
     public function calculoCambio()
     {
         $this->total = $this->calcularTotal();
-        if ($this->montoRecibido > $this->total) {
-            $this->cambio = $this->montoRecibido - $this->total;
+        // asegurar números
+        $monto = floatval($this->montoRecibido ?? 0);
+        if ($monto > $this->total) {
+            $this->cambio = round($monto - $this->total, 2);
         } else {
             $this->cambio = 0;
         }
     }
 
-    public function updatedTipoPago($nombre)
+    // cuando cambia el select (id del tipo de pago)
+    public function updatedTipoPagoId($id)
     {
-        $this->tipoPagoId = TipoPagoModel::where('nombre', $nombre)->value('id_pago');
+        // sincronizar nombre para uso eventual
+        $this->tipoPago = TipoPagoModel::where('id_pago', $id)->value('nombre') ?? '';
 
-        if ($this->tipoPago != "Efectivo") {
+        // si no es efectivo, limpiar monto y cambio
+        if ($id == null || $id != $this->efectivoId) {
             $this->montoRecibido = 0;
             $this->cambio = 0;
+        } else {
+            // si es efectivo, recalcular cambio
+            $this->calculoCambio();
         }
+    }
+
+    // cuando se actualiza el monto recibido por el usuario
+    public function updatedMontoRecibido($value)
+    {
+        // forzar numeric
+        $this->montoRecibido = is_numeric($value) ? floatval($value) : 0;
+        $this->calculoCambio();
     }
 
     public function buscarCliente()
@@ -216,9 +406,9 @@ class Ventascrud extends Component
             $this->clienteId = $cliente->id_cliente;
             $this->nombre = $cliente->nombre;
             $this->apellidos = $cliente->apellidos;
-            $this->nit = $cliente->nit;
+            $this->direccion = $cliente->direccion;
         } else {
-            $this->reset(['clienteId', 'nombre', 'apellidos', 'nit']);
+            $this->reset(['clienteId', 'nombre', 'apellidos', 'direccion']);
             $this->alert('error', 'Cliente no encontrado.');
         }
     }
@@ -227,20 +417,23 @@ class Ventascrud extends Component
     {
         $this->id_categoria = $idCategoria;
         $this->searchProducto = '';
+        // con esto volvemos al modo por defecto de categoria
+        $this->viewMode = 'categoria';
     }
 
     public function clickBuscar()
     {
-        // Buscar productos si se presiona Enter o botón
+        // Puedes implementar búsqueda avanzada si lo deseas.
+        // Actualmente el render() utiliza $this->searchProducto en modo 'categoria'.
     }
 
     private function calcularTotal()
     {
         $total = 0;
         foreach ($this->carrito as $item) {
-            $total += $item['precio'] * $item['cantidad'];
+            $total += floatval($item['precio']) * intval($item['cantidad']);
         }
-        return $total;
+        return round($total, 2);
     }
 
     public function addProducto($idProducto)
@@ -248,6 +441,30 @@ class Ventascrud extends Component
         $producto = ProductoModel::find($idProducto);
         if (!$producto) return;
 
+        // comprobar stock disponible (server-side)
+        if ($producto->stock <= 0) {
+            $this->alert('warning', 'Producto sin stock. No se puede agregar al carrito.');
+            return;
+        }
+
+        // buscar detalle de oferta activa para este producto
+        $detalleOferta = DetalleOfertaModel::where('id_producto', $producto->id_producto)
+            ->whereHas('oferta', function ($q) {
+                $q->whereDate('fecha_ini', '<=', now())
+                  ->whereDate('fecha_fin', '>=', now());
+            })->first();
+
+        // determinar precio para el carrito
+        $precioParaCarrito = $detalleOferta ? $detalleOferta->precio_final : $producto->precio;
+
+        // determinar estado legible
+        if ($detalleOferta) {
+            $statusProducto = ProductoModel::STATUS_OFERTA ?? 'oferta';
+        } else {
+            $statusProducto = $producto->stock <= 0 ? (ProductoModel::STATUS_FUERA ?? 'fuera') : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
+        }
+
+        // Si ya existe en el carrito, incrementar cantidad (respetando stock)
         $exists = false;
         foreach ($this->carrito as &$item) {
             if ($item['id_producto'] == $idProducto) {
@@ -261,15 +478,21 @@ class Ventascrud extends Component
             }
         }
 
+        // Si no existe, agregar nuevo ítem con precio calculado y status
         if (!$exists) {
+            // calcular promedio de estrellas para el item guardado en el carrito
+            $avg = EstrellasModel::where('id_producto', $producto->id_producto)->avg('puntuacion');
+            $promedio = $avg ? round($avg) : 0;
+
             $this->carrito[] = [
-                'precio' => $producto->precio,
+                'precio' => $precioParaCarrito,
                 'cantidad' => 1,
                 'id_producto' => $producto->id_producto,
-                'producto' => $producto->toArray()
+                'producto' => array_merge($producto->toArray(), ['status' => $statusProducto, 'promedio_estrellas' => $promedio]),
             ];
         }
 
+        // recalcular totales y cambio
         $this->total = $this->calcularTotal();
         $this->calculoCambio();
     }

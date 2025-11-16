@@ -1,4 +1,22 @@
-<div class="p-4">
+<div class="p-4 relative" wire:poll.3000ms="loadVentasPendientes">
+    {{-- CAMPANITA: aparece solo si hay pendientes --}}
+    @if($pendientesCount > 0)
+        <div class="absolute top-2 right-4">
+            <button type="button" title="Ventas pendientes" class="relative focus:outline-none" aria-label="Ventas pendientes">
+                <!-- Icono campana (SVG) -->
+                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+
+                <!-- Badge rojo con número -->
+                <span class="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white rounded-full bg-red-600">
+                    {{ $pendientesCount > 9 ? '9+' : $pendientesCount }}
+                </span>
+            </button>
+        </div>
+    @endif
+
     <h2 class="text-xl font-semibold mb-4">Ventas Pendientes</h2>
 
     @if($ventas->isEmpty())
@@ -17,7 +35,7 @@
                         </div>
 
                         <div class="text-right">
-                            <p class="text-lg font-bold">Total: Bs. {{ number_format($venta->total, 2) }}</p>
+                            <p class="text-blue-700 font-bold">Total: Bs. {{ number_format($venta->total, 2) }}</p>
                             <p class="text-sm text-yellow-600 font-semibold">Estado: {{ $venta->status }}</p>
                         </div>
                     </div>
@@ -27,7 +45,7 @@
                         <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
                             @foreach($venta->detalles as $det)
                                 <div class="border p-2 rounded">
-                                    <p class="text-sm font-semibold">{{ $det->producto->nombre ?? 'Producto eliminado' }}</p>
+                                    <p class="text-sm text-gray-500">{{ $det->producto->nombre ?? 'Producto eliminado' }}</p>
                                     <p class="text-sm text-gray-500">Cant: {{ $det->cantidad }}</p>
                                     <p class="text-sm text-gray-500">Precio: Bs. {{ number_format($det->precio,2) }}</p>
                                 </div>

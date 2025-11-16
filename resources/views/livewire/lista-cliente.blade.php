@@ -39,7 +39,7 @@
             <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">Nombre</th>
             <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">Apellidos</th>
             <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">C.I.</th>
-            <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">NIT</th>
+            <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">Dirección</th>
             <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">Email</th>
             <th class="text-left px-6 py-3 text-gray-600 font-semibold border-b">Acciones</th>
           </tr>
@@ -51,7 +51,7 @@
             <td class="px-6 py-4 text-gray-700">{{$item->nombre}}</td>
             <td class="px-6 py-4 text-gray-700">{{$item->apellidos}}</td>
             <td class="px-6 py-4 text-gray-700">{{$item->ci}}</td>
-            <td class="px-6 py-4 text-gray-700">{{$item->nit}}</td>
+            <td class="px-6 py-4 text-gray-700">{{$item->direccion}}</td>
             <td class="px-6 py-4 text-gray-700">{{$item->email}}</td>
             <td class="px-6 py-4 text-gray-700">
               <div class="flex items-center gap-2">
@@ -132,15 +132,15 @@
             @error('ci') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
           </div>
 
-          <!-- NIT -->
+          <!-- Dirección -->
           <div class="relative z-0 w-full mb-5 group">
-            <input wire:model="nit" type="text" id="floating_nit"
+            <input wire:model="direccion" type="text" id="floating_direccion"
                    class="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 peer"
                    placeholder=" " required />
-            <label for="floating_nit" class="absolute text-sm text-gray-500 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0]">
-              NIT
+            <label for="floating_direccion" class="absolute text-sm text-gray-500 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0]">
+              Dirección
             </label>
-            @error('nit') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+            @error('direccion') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
           </div>
 
           <!-- Email -->
