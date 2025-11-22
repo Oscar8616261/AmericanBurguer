@@ -713,6 +713,7 @@
         class="rounded-md shadow-md">
         </iframe>
     </div>
+@livewire('modal-ticket')
 </body>
 <footer class="bg-[#253399] text-white py-10">
     <div class="redes">

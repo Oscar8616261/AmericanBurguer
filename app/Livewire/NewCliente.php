@@ -19,8 +19,15 @@ class NewCliente extends Component
     public $email = '';
 
     protected $listeners = [
-        'openModal' => 'openModal' // permite recibir el evento emitido desde la vista: $emitTo('new-cliente','openModal')
+        'openModal' => 'openModal'
     ];
+
+    public function mount($open = false)
+    {
+        if ($open) {
+            $this->showModal = true;
+        }
+    }
 
     protected function rules()
     {
@@ -45,6 +52,7 @@ class NewCliente extends Component
         $this->showModal = false;
         $this->resetInputs();
         $this->resetValidation();
+        return redirect()->route('login');
     }
 
     public function resetInputs()
@@ -69,11 +77,8 @@ class NewCliente extends Component
         ]);
 
         $this->alert('success', 'Cliente registrado correctamente');
-
         $this->closeModal();
-
-        // opcional: emitir para que otros componentes refresquen sus listas
-        $this->emit('clienteRegistrado');
+        $this->dispatch('clienteRegistrado');
     }
 
     public function render()

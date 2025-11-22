@@ -27,6 +27,7 @@ class Ventascrud extends Component
     public $total = 0;
     public $searchCliente = '';
     public $clientes = [];
+    public $recomendados = [];
 
     // datos cliente
     public $ciCliente;
@@ -54,6 +55,10 @@ class Ventascrud extends Component
     // vistas: categoria | ofertas | destacados
     public $viewMode = 'categoria';
     public $limitDestacados = 6; // mostrar 6 destacados por defecto
+
+    // Vista previa
+    public $showPreview = false;
+    public $previewVentaId = null;
 
     public function mount()
     {
@@ -118,6 +123,7 @@ class Ventascrud extends Component
                 $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
                 return $producto;
             })->filter()->values();
+            $this->recomendados = [];
 
         } elseif ($this->viewMode === 'destacados') {
             // Obtener ids top por promedio de estrellas
@@ -162,6 +168,7 @@ class Ventascrud extends Component
 
                 return $producto;
             })->filter()->values();
+            $this->recomendados = [];
 
         } else {
             // Modo por categoría (comportamiento original)
@@ -205,6 +212,45 @@ class Ventascrud extends Component
                     }
                 }
 
+                return $producto;
+            });
+
+            $term = trim($this->searchProducto ?? '');
+            $first = $term !== '' ? strtolower(explode(' ', $term)[0]) : '';
+            $idsActuales = collect($this->productos)->pluck('id_producto')->all();
+            $recomQuery = ProductoModel::where('id_categoria', $categoriaId)
+                ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja');
+            if ($first !== '') {
+                $recomQuery = $recomQuery->whereRaw('LOWER(nombre) LIKE ?', ['%'.$first.'%']);
+            }
+            $recs = $recomQuery->orderBy('nombre')->limit(8)->get()->filter(function($p) use ($idsActuales){
+                return !in_array($p->id_producto, $idsActuales);
+            });
+            $this->recomendados = $recs->map(function($producto){
+                $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
+                    ->whereHas('oferta', function ($q) {
+                        $q->whereDate('fecha_ini', '<=', now())
+                          ->whereDate('fecha_fin', '>=', now());
+                    })->first();
+                if ($detalle) {
+                    $producto->precio_mostrar = $detalle->precio_final;
+                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                } else {
+                    $producto->precio_mostrar = $producto->precio;
+                    if ($producto->status !== (ProductoModel::STATUS_BAJA ?? 'baja')) {
+                        if ($producto->stock <= 0) {
+                            $producto->status = ProductoModel::STATUS_FUERA ?? 'fuera';
+                        } else {
+                            $producto->status = ProductoModel::STATUS_DISPONIBLE ?? 'disponible';
+                        }
+                    }
+                }
+                try {
+                    $puntuaciones = EstrellasModel::where('id_producto', $producto->id_producto)->pluck('puntuacion');
+                    $producto->promedio_estrellas = $puntuaciones->count() > 0 ? round($puntuaciones->avg()) : 0;
+                } catch (\Throwable $e) {
+                    $producto->promedio_estrellas = 0;
+                }
                 return $producto;
             });
         }
@@ -326,7 +372,7 @@ class Ventascrud extends Component
                 'cambio',
             ]);
 
-            $this->alert('success', 'Venta confirmada y guardada con éxito.');
+            $this->dispatch('openTicket', $venta->id_venta);
         }
         // CLIENTE
         elseif ($this->isCliente) {
@@ -357,8 +403,14 @@ class Ventascrud extends Component
                 'ciCliente',      // <--- limpiamos el CI también en el flujo cliente
             ]);
 
-            $this->alert('success', 'Pedido creado y guardado como PENDIENTE.');
+            $this->dispatch('openTicket', $venta->id_venta);
         }
+    }
+
+    public function closePreview()
+    {
+        $this->showPreview = false;
+        $this->previewVentaId = null;
     }
 
     // calcular cambio según monto recibido

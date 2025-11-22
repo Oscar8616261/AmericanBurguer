@@ -30,15 +30,9 @@
           @enderror
 
           @if($clienteId)
-            <div class="mt-3 space-y-2">
-              <label class="block text-sm font-medium text-gray-700">Nombre</label>
-              <input type="text" class="w-full p-2 border rounded" value="{{ $nombre }}" disabled>
-
-              <label class="block text-sm font-medium text-gray-700">Apellidos</label>
-              <input type="text" class="w-full p-2 border rounded" value="{{ $apellidos }}" disabled>
-
-              <label class="block text-sm font-medium text-gray-700">Dirección</label>
-              <input type="text" class="w-full p-2 border rounded" value="{{ $direccion }}" disabled>
+            <div class="mt-3">
+              <label class="block text-sm font-medium text-gray-700">Nombre y Apellidos</label>
+              <input type="text" class="w-full p-2 border rounded" value="{{ $nombre }} {{ $apellidos }}" disabled>
             </div>
           @else
             <p class="text-sm text-gray-500 mt-2">Busca un cliente por CI para cargar sus datos.</p>
@@ -172,8 +166,15 @@
         </div>
 
         <!-- Buscador -->
-        <div class="bg-white p-4 rounded-lg shadow-lg text-black">
-          <h2 class="text-blue-700 font-semibold mb-2">Buscar Producto</h2>
+<div class="bg-white p-4 rounded-lg shadow-lg text-black">
+  @auth('web')
+  <div class="flex justify-end mb-3">
+    <a href="{{ route('reportes.ventas') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+      Reportes
+    </a>
+  </div>
+  @endauth
+  <h2 class="text-blue-700 font-semibold mb-2">Buscar Producto</h2>
           <div class="flex items-center">
             <input type="search" wire:model="searchProducto" wire:keydown.enter="clickBuscar"
                    placeholder="Buscar Producto"
@@ -184,6 +185,25 @@
               Buscar
             </button>
           </div>
+          @if(!empty($recomendados))
+          <div class="mt-3">
+            <p class="text-sm text-gray-500 mb-2">Recomendados</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              @foreach($recomendados as $rec)
+                <div class="flex items-center p-2 border rounded-lg bg-white">
+                  <img class="w-12 h-12 rounded-lg object-cover mr-2" src="/storage/img/{{$rec->foto}}">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate text-black">{{$rec->nombre}}</p>
+                    <p class="text-xs text-gray-500 truncate">{{$rec->descripcion}}</p>
+                  </div>
+                  <button wire:click="addProducto({{$rec->id_producto}})" class="bg-green-600 hover:bg-green-700 w-8 h-8 rounded text-white ml-2">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              @endforeach
+            </div>
+          </div>
+          @endif
         </div>
 
         <!-- Productos (lista principal) -->
@@ -342,3 +362,5 @@
     </div>
   </div>
 </div>
+
+{{-- Modal global manejado por ModalTicket en el layout --}}

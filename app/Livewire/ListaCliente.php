@@ -8,6 +8,7 @@ use App\Models\ClienteModel;
 use App\Models\VentaModel;
 use App\Models\EstrellasModel;
 use Alert;
+use Exception;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 
 class ListaCliente extends Component
@@ -35,7 +36,7 @@ class ListaCliente extends Component
         return $rules;
     }
     public function clickBuscar(){
-
+        $this->resetPage();
     }
     public function limpiarDatos(){
         $this->nombre = '';
@@ -54,7 +55,14 @@ class ListaCliente extends Component
     }
     public function render()
     {
-        $clientes = ClienteModel::where('nombre','like','%'.$this->search.'%')->paginate(6);
+        $term = trim($this->search);
+        $clientes = ClienteModel::when($term !== '', function($q) use ($term) {
+                $q->where(function($qq) use ($term) {
+                    $qq->where('nombre','like','%'.$term.'%')
+                       ->orWhere('ci','like','%'.$term.'%');
+                });
+            })
+            ->paginate(6);
         return view('livewire.lista-cliente',compact('clientes'));
     }
     public function enviarClick()

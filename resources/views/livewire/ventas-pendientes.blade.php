@@ -68,3 +68,5 @@
         </div>
     @endif
 </div>
+
+{{-- Modal global manejado por ModalTicket en el layout --}}

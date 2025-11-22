@@ -1,4 +1,4 @@
 @extends('layouts.designer1')
 @section('content')
-@livewire('newCliente', ['open' => ($open ?? false)])
+@livewire('ticket-venta', ['ventaId' => $ventaId])
 @endsection

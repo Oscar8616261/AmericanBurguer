@@ -7,7 +7,8 @@
             @auth('web')
             <button  data-modal-target="default-modal" wire:click="openModal()" data-modal-toggle="default-modal"
             class="text-[#ffffff] bg-[#db1b1b] hover:bg-orange-600 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-4 focus:ring-orange-300 dark:focus:ring-orange-800 dark:bg-orange-500 dark:hover:bg-orange-600 dark:text-white">
-            Nuevo</button>     
+            Nuevo</button>
+            <a href="{{ route('reportes.productos') }}" class="ml-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">Reportes</a>
             @endauth 
         </div>
     </div>

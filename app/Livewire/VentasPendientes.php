@@ -15,6 +15,8 @@ class VentasPendientes extends Component
 
     public $ventas; // colección de ventas (pendientes)
     public $pendientesCount = 0;
+    public $showPreview = false;
+    public $previewVentaId = null;
 
     protected $listeners = [
         // permite refrescar desde JS u otros componentes: Livewire.emit('refreshVentasList')
@@ -85,13 +87,19 @@ class VentasPendientes extends Component
 
             DB::commit();
 
-            $this->alert('success', 'Venta confirmada y stock actualizado correctamente.');
             $this->loadVentasPendientes();
+            $this->dispatch('openTicket', $venta->id_venta);
 
         } catch (\Exception $e) {
             DB::rollBack();
             $this->alert('error', 'Error al confirmar la venta: ' . $e->getMessage());
             // opcional: \Log::error('Error confirmando venta', ['id' => $idVenta, 'error' => $e->getMessage()]);
         }
+    }
+
+    public function closePreview()
+    {
+        $this->showPreview = false;
+        $this->previewVentaId = null;
     }
 }

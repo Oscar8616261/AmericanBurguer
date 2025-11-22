@@ -45,3 +45,26 @@ Route::middleware(['auth:web,clientes'])->group(function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::middleware(['auth:web'])->group(function () {
+    Route::get('/reportes/ventas', function () {
+        return view('reportes.ventas');
+    })->name('reportes.ventas');
+    Route::get('/reportes/productos', function () {
+        return view('reportes.productos');
+    })->name('reportes.productos');
+    Route::get('/ventas/preview/{ventaId}', function ($ventaId) {
+        return view('ventas.preview', ['ventaId' => $ventaId]);
+    })->name('venta.preview');
+});
+
+Route::middleware(['auth:clientes'])->group(function () {
+    Route::get('/pedidos/preview/{ventaId}', function ($ventaId) {
+        return view('pedidos.preview', ['ventaId' => $ventaId]);
+    })->name('pedido.preview');
+});
+
+// Registro público de clientes
+Route::get('/cliente/registrar', function () {
+    return view('cliente.create', ['open' => true]);
+})->name('cliente.registrar');
