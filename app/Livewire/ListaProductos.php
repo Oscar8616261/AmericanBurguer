@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
-use App\Models\DetalleOfertaModel; // <-- agregado
+use App\Models\DetalleOfertaModel;
 use App\Models\OfertaModel;
 
 class ListaProductos extends Component
@@ -45,97 +45,12 @@ class ListaProductos extends Component
 
     protected $paginationTheme = 'tailwind';
 
+    // Oferta
     public $showOfertaModal = false;
     public $ofertaProductoId = null;   // id del producto para el que abrimos modal
     public $ofertaId = null;          // id de la oferta seleccionada
     public $ofertas = [];             // colección de ofertas disponibles
     public $precio_final = null;      // calculado en el front
-
-    // ... resto del código ...
-
-    /**
-     * Abrir modal Oferta para $id (producto).
-     */
-    public function openOfertaModal($id)
-    {
-        $this->ofertaProductoId = $id;
-        // Cargar ofertas activas (filtrar por fecha; ajusta si quieres todas)
-        $this->ofertas = OfertaModel::whereDate('fecha_ini', '<=', now())
-                                    ->whereDate('fecha_fin', '>=', now())
-                                    ->orderBy('fecha_ini', 'desc')
-                                    ->get();
-
-        $this->ofertaId = null;
-        $this->precio_final = null;
-        $this->showOfertaModal = true;
-    }
-
-    /**
-     * Calcula precio_final según oferta seleccionada y precio actual del producto.
-     * Llamado cuando cambia el combobox.
-     */
-    public function calcularPrecio()
-    {
-        $producto = ProductoModel::find($this->ofertaProductoId);
-        if (!$producto) {
-            $this->precio_final = null;
-            return;
-        }
-
-        if (!$this->ofertaId) {
-            $this->precio_final = null;
-            return;
-        }
-
-        $oferta = OfertaModel::find($this->ofertaId);
-        if (!$oferta) {
-            $this->precio_final = null;
-            return;
-        }
-
-        // Asumimos 'descuento' es porcentaje (ej. 15 -> 15%)
-        $descuento = floatval($oferta->descuento);
-        $precio = floatval($producto->precio);
-
-        $this->precio_final = round($precio * (1 - ($descuento / 100)), 2);
-    }
-
-    /**
-     * Guarda/actualiza el Detalle_oferta para el producto seleccionado.
-     */
-    public function guardarDetalleOferta()
-    {
-        $this->validate(['ofertaId' => 'required|integer']);
-
-        $producto = ProductoModel::find($this->ofertaProductoId);
-        $oferta = OfertaModel::find($this->ofertaId);
-
-        if (!$producto || !$oferta) {
-            $this->alert('error', 'Producto u Oferta no encontrados.');
-            return;
-        }
-
-        $descuento = floatval($oferta->descuento); // ej: 15 => 15%
-        $precio_final = round(floatval($producto->precio) * (1 - ($descuento / 100)), 2);
-
-        // Crea o actualiza detalle de oferta
-        DetalleOfertaModel::updateOrCreate(
-            ['id_producto' => $producto->id_producto],
-            [
-                'id_oferta' => $oferta->id_oferta,
-                'precio_final' => $precio_final,
-            ]
-        );
-
-        // Opcional: no es necesario sobreescribir $producto->precio; solo marcar estado
-        $producto->status = ProductoModel::STATUS_OFERTA;
-        $producto->save();
-
-        $this->alert('success', "Oferta aplicada. Precio final: Bs {$precio_final}");
-        $this->showOfertaModal = false;
-        // reset props...
-    }
-
 
     protected function rules()
     {
@@ -208,6 +123,87 @@ class ListaProductos extends Component
         $this->alert('success', 'Calificación Guardada!');
     }
 
+    /**
+     * Abrir modal Oferta para $id (producto).
+     */
+    public function openOfertaModal($id)
+    {
+        $this->ofertaProductoId = $id;
+
+        // Cargar ofertas activas (filtrar por fecha)
+        $this->ofertas = OfertaModel::whereDate('fecha_ini', '<=', now())
+                                    ->whereDate('fecha_fin', '>=', now())
+                                    ->orderBy('fecha_ini', 'desc')
+                                    ->get();
+
+        $this->ofertaId = null;
+        $this->precio_final = null;
+        $this->showOfertaModal = true;
+    }
+
+    /**
+     * Calcula precio_final según oferta seleccionada y precio actual del producto.
+     */
+    public function calcularPrecio()
+    {
+        $producto = ProductoModel::find($this->ofertaProductoId);
+        if (!$producto) {
+            $this->precio_final = null;
+            return;
+        }
+
+        if (!$this->ofertaId) {
+            $this->precio_final = null;
+            return;
+        }
+
+        $oferta = OfertaModel::find($this->ofertaId);
+        if (!$oferta) {
+            $this->precio_final = null;
+            return;
+        }
+
+        // Asumimos 'descuento' es porcentaje (ej. 15 -> 15%)
+        $descuento = floatval($oferta->descuento);
+        $precio = floatval($producto->precio);
+
+        $this->precio_final = round($precio * (1 - ($descuento / 100)), 2);
+    }
+
+    /**
+     * Guarda/actualiza el Detalle_oferta para el producto seleccionado.
+     */
+    public function guardarDetalleOferta()
+    {
+        $this->validate(['ofertaId' => 'required|integer']);
+
+        $producto = ProductoModel::find($this->ofertaProductoId);
+        $oferta   = OfertaModel::find($this->ofertaId);
+
+        if (!$producto || !$oferta) {
+            $this->alert('error', 'Producto u Oferta no encontrados.');
+            return;
+        }
+
+        $descuento    = floatval($oferta->descuento);
+        $precio_final = round(floatval($producto->precio) * (1 - ($descuento / 100)), 2);
+
+        // Crea o actualiza detalle de oferta
+        DetalleOfertaModel::updateOrCreate(
+            ['id_producto' => $producto->id_producto],
+            [
+                'id_oferta'    => $oferta->id_oferta,
+                'precio_final' => $precio_final,
+            ]
+        );
+
+        $producto->status = ProductoModel::STATUS_OFERTA;
+        $producto->save();
+
+        $this->alert('success', "Oferta aplicada. Precio final: Bs {$precio_final}");
+        $this->showOfertaModal = false;
+    }
+
     public function render()
     {
         $query = ProductoModel::where('status', '!=', ProductoModel::STATUS_BAJA)
@@ -217,26 +213,32 @@ class ListaProductos extends Component
         $productos = $query->paginate(6);
 
         $productos->getCollection()->transform(function ($producto) {
-            // 1) promedio estrellas (tu código actual)
+            // 1) Promedio estrellas
             $puntuaciones = EstrellasModel::where('id_producto', $producto->id_producto)->pluck('puntuacion');
             $producto->promedio_estrellas = $puntuaciones->count() > 0 ? round($puntuaciones->avg()) : 0;
 
-            // 2) Buscar detalle de oferta activo para ESTE producto
-            $detalle = \App\Models\DetalleOfertaModel::where('id_producto', $producto->id_producto)
-                ->whereHas('oferta', function($q) {
+            // Precio original SIEMPRE
+            $producto->precio_original = $producto->precio;
+
+            // 2) Buscar detalle de oferta activo para este producto
+            $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
+                ->whereHas('oferta', function ($q) {
                     $q->whereDate('fecha_ini', '<=', now())
-                    ->whereDate('fecha_fin', '>=', now());
+                      ->whereDate('fecha_fin', '>=', now());
                 })->first();
 
             if ($detalle) {
-                // Si hay oferta activa, usamos precio_final para mostrar y marcamos estado
+                // Con oferta activa
+                $producto->precio_oferta  = $detalle->precio_final;
+                $producto->en_oferta      = true;
                 $producto->precio_mostrar = $detalle->precio_final;
-                $producto->status = ProductoModel::STATUS_OFERTA;
+                $producto->status         = ProductoModel::STATUS_OFERTA;
             } else {
-                // No hay oferta activa: mostramos precio original
+                // Sin oferta activa
+                $producto->precio_oferta  = null;
+                $producto->en_oferta      = false;
                 $producto->precio_mostrar = $producto->precio;
 
-                // Asegura consistencia: recalcula estado según stock (pero no sobreescribir 'baja')
                 if ($producto->status !== ProductoModel::STATUS_BAJA) {
                     if ($producto->stock <= 0) {
                         $producto->status = ProductoModel::STATUS_FUERA;
@@ -252,11 +254,10 @@ class ListaProductos extends Component
         $categorias = CategoriaModel::all();
 
         return view('livewire.lista-productos', [
-            'productos' => $productos,
+            'productos'  => $productos,
             'categorias' => $categorias,
         ]);
     }
-
 
     /**
      * Guardar (crear o actualizar) producto.
@@ -265,7 +266,7 @@ class ListaProductos extends Component
     {
         $this->validate();
 
-        $stockInt = intval($this->stock);
+        $stockInt     = intval($this->stock);
         $categoriaInt = intval($this->categoria);
 
         if ($this->producto_id) {
@@ -275,10 +276,10 @@ class ListaProductos extends Component
                 return;
             }
 
-            $producto->nombre = $this->nombre;
-            $producto->precio = $this->precio;
-            $producto->stock = $stockInt;
-            $producto->descripcion = $this->descripcion;
+            $producto->nombre       = $this->nombre;
+            $producto->precio       = $this->precio;
+            $producto->stock        = $stockInt;
+            $producto->descripcion  = $this->descripcion;
             $producto->id_categoria = $categoriaInt;
 
             if ($this->foto && is_object($this->foto)) {
@@ -295,7 +296,9 @@ class ListaProductos extends Component
             $producto->save();
 
             // Forzar consistencia de estado (si no es 'baja')
-            $producto->updateStatusByStockAndOffer();
+            if (method_exists($producto, 'updateStatusByStockAndOffer')) {
+                $producto->updateStatusByStockAndOffer();
+            }
 
             $this->producto_id = '';
         } else {
@@ -303,16 +306,18 @@ class ListaProductos extends Component
             $this->foto->storeAs('img', $filename, 'public');
 
             $producto = ProductoModel::create([
-                'nombre' => $this->nombre,
-                'descripcion' => $this->descripcion,
-                'precio' => $this->precio,
-                'stock' => $stockInt,
+                'nombre'       => $this->nombre,
+                'descripcion'  => $this->descripcion,
+                'precio'       => $this->precio,
+                'stock'        => $stockInt,
                 'id_categoria' => $categoriaInt,
-                'foto' => $filename,
-                'status' => ProductoModel::STATUS_DISPONIBLE,
+                'foto'         => $filename,
+                'status'       => ProductoModel::STATUS_DISPONIBLE,
             ]);
 
-            $producto->updateStatusByStockAndOffer();
+            if (method_exists($producto, 'updateStatusByStockAndOffer')) {
+                $producto->updateStatusByStockAndOffer();
+            }
         }
 
         $this->alert('success', 'Datos Guardados!');
@@ -329,13 +334,13 @@ class ListaProductos extends Component
             return;
         }
 
-        $this->nombre = $producto->nombre;
+        $this->nombre      = $producto->nombre;
         $this->descripcion = $producto->descripcion;
-        $this->precio = $producto->precio;
-        $this->stock = $producto->stock;
-        $this->categoria = $producto->id_categoria;
-        $this->status = $producto->status;
-        $this->foto = $producto->foto;
+        $this->precio      = $producto->precio;
+        $this->stock       = $producto->stock;
+        $this->categoria   = $producto->id_categoria;
+        $this->status      = $producto->status;
+        $this->foto        = $producto->foto;
         $this->producto_id = $id;
         $this->openModal();
     }
@@ -346,7 +351,7 @@ class ListaProductos extends Component
     public function openIncreaseModal($id)
     {
         $this->increaseProductId = $id;
-        $this->increaseAmount = 1;
+        $this->increaseAmount    = 1;
         $this->showIncreaseModal = true;
     }
 
@@ -355,12 +360,11 @@ class ListaProductos extends Component
      */
     public function increaseStockConfirm()
     {
-        // validar
         $this->validate([
             'increaseAmount' => 'required|integer|min:1',
         ]);
 
-        $id = $this->increaseProductId;
+        $id     = $this->increaseProductId;
         $amount = intval($this->increaseAmount);
 
         $producto = ProductoModel::find($id);
@@ -370,12 +374,10 @@ class ListaProductos extends Component
             return;
         }
 
-        $oldStock = intval($producto->stock);
+        $oldStock       = intval($producto->stock);
         $producto->stock = $oldStock + $amount;
 
-        // Si el producto está marcado como 'baja', no lo tocaremos en status
         if ($producto->status !== ProductoModel::STATUS_BAJA) {
-            // Si anteriormente estaba fuera de stock y ahora sube >0 => actualizar a oferta/disponible
             if ($oldStock <= 0 && $producto->stock > 0) {
                 if (DB::table('Detalle_oferta')->where('id_producto', $producto->id_producto)->exists()) {
                     $producto->status = ProductoModel::STATUS_OFERTA;
@@ -383,8 +385,9 @@ class ListaProductos extends Component
                     $producto->status = ProductoModel::STATUS_DISPONIBLE;
                 }
             } else {
-                // En cualquier otro caso, recalculamos por seguridad
-                $producto->updateStatusByStockAndOffer();
+                if (method_exists($producto, 'updateStatusByStockAndOffer')) {
+                    $producto->updateStatusByStockAndOffer();
+                }
             }
         }
 
@@ -393,13 +396,10 @@ class ListaProductos extends Component
         $this->alert('success', "Stock aumentado. Nuevo stock: {$producto->stock}");
         $this->showIncreaseModal = false;
         $this->increaseProductId = null;
-        $this->increaseAmount = 1;
+        $this->increaseAmount    = 1;
         $this->resetPage();
     }
 
-    /**
-     * (Opcional) método que borraba antes. Lo dejamos por si quieres seguir eliminando realmente.
-     */
     public function delete($id)
     {
         try {
@@ -421,17 +421,17 @@ class ListaProductos extends Component
 
     public function limpiarDatos()
     {
-        $this->nombre = '';
-        $this->descripcion = '';
-        $this->precio = '';
-        $this->stock = '';
-        $this->categoria = '';
-        $this->foto = null;
-        $this->producto_id = '';
-        $this->puntuacion = null;
-        $this->status = '';
+        $this->nombre            = '';
+        $this->descripcion       = '';
+        $this->precio            = '';
+        $this->stock             = '';
+        $this->categoria         = '';
+        $this->foto              = null;
+        $this->producto_id       = '';
+        $this->puntuacion        = null;
+        $this->status            = '';
         $this->showIncreaseModal = false;
         $this->increaseProductId = null;
-        $this->increaseAmount = 1;
+        $this->increaseAmount    = 1;
     }
 }

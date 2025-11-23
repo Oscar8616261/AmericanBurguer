@@ -105,7 +105,7 @@
                   <!-- izquierda: imagen -->
                   <img class="w-16 h-16 rounded-lg object-cover mr-3" src="/storage/img/{{$item->foto}}">
 
-                  <!-- centro: texto (nombre, descripcion, disponible, estrellas) -->
+                  <!-- centro: texto -->
                   <div class="flex-1 min-w-0">
                     <p class="font-medium truncate text-black">{{$item->nombre}}</p>
                     <p class="text-gray-500 truncate">{{$item->descripcion}}</p>
@@ -138,11 +138,24 @@
                     @endif
                   </div>
 
-                  <!-- derecha: precio y botón (con anchura fija para evitar solapamientos) -->
+                  <!-- derecha: PRECIOS + botón -->
                   <div class="flex flex-col items-end justify-between ml-3" style="min-width:130px">
-                    <div class="text-base font-semibold text-black">
-                      Bs. {{ number_format($item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
-                    </div>
+                    @if(!empty($item->en_oferta) && $item->en_oferta)
+                      <div class="text-right">
+                        <p class="text-xs text-gray-500">
+                          <span class="line-through">
+                            Bs. {{ number_format($item->precio_original ?? $item->precio, 2, '.', ',') }}
+                          </span>
+                        </p>
+                        <p class="text-base font-bold text-red-600">
+                          Bs. {{ number_format($item->precio_oferta ?? $item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
+                        </p>
+                      </div>
+                    @else
+                      <div class="text-base font-semibold text-black">
+                        Bs. {{ number_format($item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
+                      </div>
+                    @endif
 
                     @if(($item->stock ?? 0) > 0)
                       <button wire:click="addProducto({{$item->id_producto}})"
@@ -166,15 +179,15 @@
         </div>
 
         <!-- Buscador -->
-<div class="bg-white p-4 rounded-lg shadow-lg text-black">
-  @auth('web')
-  <div class="flex justify-end mb-3">
-    <a href="{{ route('reportes.ventas') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
-      Reportes
-    </a>
-  </div>
-  @endauth
-  <h2 class="text-blue-700 font-semibold mb-2">Buscar Producto</h2>
+        <div class="bg-white p-4 rounded-lg shadow-lg text-black">
+          @auth('web')
+          <div class="flex justify-end mb-3">
+            <a href="{{ route('reportes.ventas') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+              Reportes
+            </a>
+          </div>
+          @endauth
+          <h2 class="text-blue-700 font-semibold mb-2">Buscar Producto</h2>
           <div class="flex items-center">
             <input type="search" wire:model="searchProducto" wire:keydown.enter="clickBuscar"
                    placeholder="Buscar Producto"
@@ -247,9 +260,22 @@
               </div>
 
               <div class="flex flex-col items-end justify-between ml-3" style="min-width:130px">
-                <div class="text-base font-semibold text-black">
-                  Bs. {{ number_format($item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
-                </div>
+                @if(!empty($item->en_oferta) && $item->en_oferta)
+                  <div class="text-right">
+                    <p class="text-xs text-gray-500">
+                      <span class="line-through">
+                        Bs. {{ number_format($item->precio_original ?? $item->precio, 2, '.', ',') }}
+                      </span>
+                    </p>
+                    <p class="text-base font-bold text-red-600">
+                      Bs. {{ number_format($item->precio_oferta ?? $item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
+                    </p>
+                  </div>
+                @else
+                  <div class="text-base font-semibold text-black">
+                    Bs. {{ number_format($item->precio_mostrar ?? $item->precio, 2, '.', ',') }}
+                  </div>
+                @endif
 
                 @if(($item->stock ?? 0) > 0)
                   <button wire:click="addProducto({{$item->id_producto}})"
@@ -360,6 +386,91 @@
         @endif
       </div>
     </div>
+  </div>
+
+  {{-- MODAL "También te puede gustar" --}}
+  <div
+      x-data="{ open: false }"
+      x-on:show-suggestions.window="
+          open = true;
+          clearTimeout(window.suggestionTimeout);
+          window.suggestionTimeout = setTimeout(() => { open = false }, 4000);
+      "
+  >
+      <div
+          x-show="open"
+          x-transition
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          style="display: none;"
+      >
+          <div class="bg-white rounded-lg shadow-lg p-4 w-full max-w-xl text-black">
+              <div class="flex justify-between items-center mb-3">
+                  <h3 class="text-lg font-semibold text-blue-700">
+                      También te puede gustar
+                  </h3>
+                  <button
+                      class="text-gray-500 hover:text-gray-700"
+                      @click="open = false"
+                  >
+                      ✕
+                  </button>
+              </div>
+
+              @if(!empty($suggestedProducts) && count($suggestedProducts) > 0)
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      @foreach($suggestedProducts as $sug)
+                          <div class="flex items-start p-2 border rounded-lg bg-gray-50">
+                              <img
+                                  src="/storage/img/{{ $sug['foto'] ?? '' }}"
+                                  class="w-14 h-14 rounded-lg object-cover mr-2"
+                              >
+
+                              <div class="flex-1 min-w-0">
+                                  <p class="font-medium text-sm truncate">
+                                      {{ $sug['nombre'] ?? '' }}
+                                  </p>
+                                  <p class="text-xs text-gray-500 truncate">
+                                      {{ $sug['descripcion'] ?? '' }}
+                                  </p>
+
+                                  @php
+                                      $enOferta = $sug['en_oferta'] ?? false;
+                                      $precioOriginal = $sug['precio_original'] ?? 0;
+                                      $precioMostrar  = $sug['precio_mostrar'] ?? 0;
+                                  @endphp
+
+                                  @if($enOferta)
+                                      <div class="mt-1 text-xs">
+                                          <span class="line-through text-gray-400">
+                                              Bs. {{ number_format($precioOriginal, 2, '.', ',') }}
+                                          </span>
+                                          <span class="ml-1 font-bold text-red-600">
+                                              Bs. {{ number_format($precioMostrar, 2, '.', ',') }}
+                                          </span>
+                                      </div>
+                                  @else
+                                      <div class="mt-1 text-sm font-semibold text-gray-800">
+                                          Bs. {{ number_format($precioMostrar, 2, '.', ',') }}
+                                      </div>
+                                  @endif
+                              </div>
+
+                              <button
+                                  wire:click="addProducto({{ $sug['id_producto'] }})"
+                                  class="bg-green-600 hover:bg-green-700 w-9 h-9 rounded-full text-white ml-2 flex items-center justify-center"
+                              >
+                                  <i class="fas fa-plus"></i>
+                              </button>
+                          </div>
+                      @endforeach
+                  </div>
+              @else
+                  <p class="text-sm text-gray-500">
+                      No hay sugerencias en este momento.
+                  </p>
+              @endif
+          </div>
+      </div>
   </div>
 </div>
 

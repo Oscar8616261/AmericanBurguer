@@ -60,6 +60,9 @@ class Ventascrud extends Component
     public $showPreview = false;
     public $previewVentaId = null;
 
+    // Sugerencias "También te puede gustar"
+    public $suggestedProducts = [];
+
     public function mount()
     {
         // Cargar tipos de pago filtrando nombres nulos
@@ -106,9 +109,9 @@ class Ventascrud extends Component
         if ($this->viewMode === 'ofertas') {
             // Detalles de oferta activas
             $detalles = DetalleOfertaModel::whereHas('oferta', function ($q) {
-                    $q->whereDate('fecha_ini', '<=', now())
-                      ->whereDate('fecha_fin', '>=', now());
-                })->get();
+                $q->whereDate('fecha_ini', '<=', now())
+                    ->whereDate('fecha_fin', '>=', now());
+            })->get();
 
             // Mapear a productos (usando ProductoModel::find para compatibilidad)
             $this->productos = $detalles->map(function ($detalle) {
@@ -119,8 +122,13 @@ class Ventascrud extends Component
                 $avg = EstrellasModel::where('id_producto', $producto->id_producto)->avg('puntuacion');
                 $producto->promedio_estrellas = $avg ? round($avg) : 0;
 
-                $producto->precio_mostrar = $detalle->precio_final;
-                $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                // precios y oferta
+                $producto->precio_original = $producto->precio;
+                $producto->precio_oferta   = $detalle->precio_final;
+                $producto->precio_mostrar  = $detalle->precio_final;
+                $producto->en_oferta       = true;
+                $producto->status          = ProductoModel::STATUS_OFERTA ?? 'oferta';
+
                 return $producto;
             })->filter()->values();
             $this->recomendados = [];
@@ -148,18 +156,27 @@ class Ventascrud extends Component
             $this->productos = $ordered->map(function ($producto) {
                 if (!$producto) return null;
 
+                // precio original siempre
+                $producto->precio_original = $producto->precio;
+
                 $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
                     ->whereHas('oferta', function ($q) {
                         $q->whereDate('fecha_ini', '<=', now())
-                          ->whereDate('fecha_fin', '>=', now());
+                            ->whereDate('fecha_fin', '>=', now());
                     })->first();
 
                 if ($detalle) {
+                    $producto->precio_oferta  = $detalle->precio_final;
                     $producto->precio_mostrar = $detalle->precio_final;
-                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                    $producto->en_oferta      = true;
+                    $producto->status         = ProductoModel::STATUS_OFERTA ?? 'oferta';
                 } else {
+                    $producto->precio_oferta  = null;
                     $producto->precio_mostrar = $producto->precio;
-                    $producto->status = $producto->stock <= 0 ? (ProductoModel::STATUS_FUERA ?? 'fuera') : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
+                    $producto->en_oferta      = false;
+                    $producto->status         = $producto->stock <= 0
+                        ? (ProductoModel::STATUS_FUERA ?? 'fuera')
+                        : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
                 }
 
                 // promedio de estrellas
@@ -174,13 +191,16 @@ class Ventascrud extends Component
             // Modo por categoría (comportamiento original)
             $categoriaId = $this->id_categoria ?? 1;
             $query = ProductoModel::when($categoriaId, function ($q) use ($categoriaId) {
-                    return $q->where('id_categoria', $categoriaId);
-                })
+                return $q->where('id_categoria', $categoriaId);
+            })
                 ->where('nombre', 'like', '%' . $this->searchProducto . '%')
                 ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja')
                 ->orderBy('nombre');
 
             $this->productos = $query->get()->map(function ($producto) {
+
+                // precio original siempre
+                $producto->precio_original = $producto->precio;
 
                 // promedio estrellas
                 try {
@@ -198,10 +218,14 @@ class Ventascrud extends Component
                     })->first();
 
                 if ($detalle) {
+                    $producto->precio_oferta  = $detalle->precio_final;
                     $producto->precio_mostrar = $detalle->precio_final;
-                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                    $producto->en_oferta      = true;
+                    $producto->status         = ProductoModel::STATUS_OFERTA ?? 'oferta';
                 } else {
+                    $producto->precio_oferta  = null;
                     $producto->precio_mostrar = $producto->precio;
+                    $producto->en_oferta      = false;
 
                     if ($producto->status !== (ProductoModel::STATUS_BAJA ?? 'baja')) {
                         if ($producto->stock <= 0) {
@@ -215,28 +239,37 @@ class Ventascrud extends Component
                 return $producto;
             });
 
+            // RECOMENDADOS
             $term = trim($this->searchProducto ?? '');
             $first = $term !== '' ? strtolower(explode(' ', $term)[0]) : '';
             $idsActuales = collect($this->productos)->pluck('id_producto')->all();
             $recomQuery = ProductoModel::where('id_categoria', $categoriaId)
                 ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja');
             if ($first !== '') {
-                $recomQuery = $recomQuery->whereRaw('LOWER(nombre) LIKE ?', ['%'.$first.'%']);
+                $recomQuery = $recomQuery->whereRaw('LOWER(nombre) LIKE ?', ['%' . $first . '%']);
             }
-            $recs = $recomQuery->orderBy('nombre')->limit(8)->get()->filter(function($p) use ($idsActuales){
+            $recs = $recomQuery->orderBy('nombre')->limit(8)->get()->filter(function ($p) use ($idsActuales) {
                 return !in_array($p->id_producto, $idsActuales);
             });
-            $this->recomendados = $recs->map(function($producto){
+            $this->recomendados = $recs->map(function ($producto) {
+                // precio original
+                $producto->precio_original = $producto->precio;
+
                 $detalle = DetalleOfertaModel::where('id_producto', $producto->id_producto)
                     ->whereHas('oferta', function ($q) {
                         $q->whereDate('fecha_ini', '<=', now())
-                          ->whereDate('fecha_fin', '>=', now());
+                            ->whereDate('fecha_fin', '>=', now());
                     })->first();
                 if ($detalle) {
+                    $producto->precio_oferta  = $detalle->precio_final;
                     $producto->precio_mostrar = $detalle->precio_final;
-                    $producto->status = ProductoModel::STATUS_OFERTA ?? 'oferta';
+                    $producto->en_oferta      = true;
+                    $producto->status         = ProductoModel::STATUS_OFERTA ?? 'oferta';
                 } else {
+                    $producto->precio_oferta  = null;
                     $producto->precio_mostrar = $producto->precio;
+                    $producto->en_oferta      = false;
+
                     if ($producto->status !== (ProductoModel::STATUS_BAJA ?? 'baja')) {
                         if ($producto->stock <= 0) {
                             $producto->status = ProductoModel::STATUS_FUERA ?? 'fuera';
@@ -359,7 +392,7 @@ class Ventascrud extends Component
                 }
             }
 
-            // Reset props relevantes (AHORA INCLUYE ciCliente)
+            // Reset props relevantes
             $this->reset([
                 'carrito',
                 'total',
@@ -367,7 +400,7 @@ class Ventascrud extends Component
                 'nombre',
                 'apellidos',
                 'direccion',
-                'ciCliente',      // <--- limpiamos el CI aquí
+                'ciCliente',
                 'montoRecibido',
                 'cambio',
             ]);
@@ -394,13 +427,12 @@ class Ventascrud extends Component
                 $detalle->save();
             }
 
-            // Reset props relevantes (INCLUYE ciCliente por si acaso)
             $this->reset([
                 'carrito',
                 'total',
                 'montoRecibido',
                 'cambio',
-                'ciCliente',      // <--- limpiamos el CI también en el flujo cliente
+                'ciCliente',
             ]);
 
             $this->dispatch('openTicket', $venta->id_venta);
@@ -475,8 +507,7 @@ class Ventascrud extends Component
 
     public function clickBuscar()
     {
-        // Puedes implementar búsqueda avanzada si lo deseas.
-        // Actualmente el render() utiliza $this->searchProducto en modo 'categoria'.
+        // El render ya usa $this->searchProducto
     }
 
     private function calcularTotal()
@@ -486,6 +517,58 @@ class Ventascrud extends Component
             $total += floatval($item['precio']) * intval($item['cantidad']);
         }
         return round($total, 2);
+    }
+
+    /**
+     * Cargar 2 productos sugeridos de la misma categoría
+     * y disparar el modal "También te puede gustar".
+     */
+    private function cargarSugerencias(ProductoModel $productoBase)
+    {
+        $sugeridos = ProductoModel::where('id_categoria', $productoBase->id_categoria)
+            ->where('id_producto', '!=', $productoBase->id_producto)
+            ->where('status', '!=', ProductoModel::STATUS_BAJA ?? 'baja')
+            ->inRandomOrder()
+            ->take(2)
+            ->get()
+            ->map(function ($p) {
+                // Precio base
+                $precioOriginal = $p->precio;
+                $precioMostrar = $p->precio;
+                $enOferta = false;
+
+                // Ver si tiene oferta activa
+                $detalle = DetalleOfertaModel::where('id_producto', $p->id_producto)
+                    ->whereHas('oferta', function ($q) {
+                        $q->whereDate('fecha_ini', '<=', now())
+                            ->whereDate('fecha_fin', '>=', now());
+                    })->first();
+
+                if ($detalle) {
+                    $precioMostrar = $detalle->precio_final;
+                    $enOferta = true;
+                }
+
+                return [
+                    'id_producto'     => $p->id_producto,
+                    'nombre'          => $p->nombre,
+                    'descripcion'     => $p->descripcion,
+                    'foto'            => $p->foto,
+                    'stock'           => $p->stock,
+                    'precio_original' => $precioOriginal,
+                    'precio_mostrar'  => $precioMostrar,
+                    'en_oferta'       => $enOferta,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $this->suggestedProducts = $sugeridos;
+
+        if (!empty($this->suggestedProducts)) {
+            // Evento para que Alpine abra el modal
+            $this->dispatch('show-suggestions');
+        }
     }
 
     public function addProducto($idProducto)
@@ -503,7 +586,7 @@ class Ventascrud extends Component
         $detalleOferta = DetalleOfertaModel::where('id_producto', $producto->id_producto)
             ->whereHas('oferta', function ($q) {
                 $q->whereDate('fecha_ini', '<=', now())
-                  ->whereDate('fecha_fin', '>=', now());
+                    ->whereDate('fecha_fin', '>=', now());
             })->first();
 
         // determinar precio para el carrito
@@ -513,7 +596,9 @@ class Ventascrud extends Component
         if ($detalleOferta) {
             $statusProducto = ProductoModel::STATUS_OFERTA ?? 'oferta';
         } else {
-            $statusProducto = $producto->stock <= 0 ? (ProductoModel::STATUS_FUERA ?? 'fuera') : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
+            $statusProducto = $producto->stock <= 0
+                ? (ProductoModel::STATUS_FUERA ?? 'fuera')
+                : (ProductoModel::STATUS_DISPONIBLE ?? 'disponible');
         }
 
         // Si ya existe en el carrito, incrementar cantidad (respetando stock)
@@ -540,13 +625,19 @@ class Ventascrud extends Component
                 'precio' => $precioParaCarrito,
                 'cantidad' => 1,
                 'id_producto' => $producto->id_producto,
-                'producto' => array_merge($producto->toArray(), ['status' => $statusProducto, 'promedio_estrellas' => $promedio]),
+                'producto' => array_merge($producto->toArray(), [
+                    'status' => $statusProducto,
+                    'promedio_estrellas' => $promedio
+                ]),
             ];
         }
 
         // recalcular totales y cambio
         $this->total = $this->calcularTotal();
         $this->calculoCambio();
+
+        // Cargar sugerencias y mostrar modal
+        $this->cargarSugerencias($producto);
     }
 
     public function removeProducto($idProducto)
