@@ -630,14 +630,14 @@ class Ventascrud extends Component
                     'promedio_estrellas' => $promedio
                 ]),
             ];
+
+            // 🔹 SOLO aquí mostramos el modal de sugerencias
+            $this->cargarSugerencias($producto);
         }
 
         // recalcular totales y cambio
         $this->total = $this->calcularTotal();
         $this->calculoCambio();
-
-        // Cargar sugerencias y mostrar modal
-        $this->cargarSugerencias($producto);
     }
 
     public function removeProducto($idProducto)
@@ -660,3 +660,4 @@ class Ventascrud extends Component
         $this->calculoCambio();
     }
 }
+

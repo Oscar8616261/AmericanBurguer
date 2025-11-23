@@ -1,16 +1,17 @@
 {{-- resources/views/livewire/ventascrud.blade.php --}}
-<div class="bg-[#0A3D91] p-6 min-h-screen text-white">
-  <div class="container mx-auto">
+<div class="min-h-screen text-white"
+     style="background: radial-gradient(circle at top left, #2b2b2b 0%, #161616 40%, #050505 100%);">
+  <div class="container mx-auto py-6">
     <div class="grid grid-cols-4 gap-6">
       <!-- PANEL CLIENTE / OPERADOR -->
       <div class="bg-white text-black p-4 rounded-lg shadow-lg col-span-1">
 
         @if(auth()->guard('web')->check())
-          <h2 class="text-blue-700 font-semibold mb-3">Datos del Cliente</h2>
+          <h2 class="text-[#ff7a00] font-semibold mb-3">Datos del Cliente</h2>
         @elseif(auth()->guard('clientes')->check())
-          <h2 class="text-blue-700 font-semibold mb-3">Escoja un operador de venta</h2>
+          <h2 class="text-[#ff7a00] font-semibold mb-3">Escoja un operador de venta</h2>
         @else
-          <h2 class="text-blue-700 font-semibold mb-3">Inicia sesión para continuar</h2>
+          <h2 class="text-[#ff7a00] font-semibold mb-3">Inicia sesión para continuar</h2>
         @endif
 
         @if(auth()->guard('web')->check())
@@ -21,7 +22,7 @@
                  class="w-full p-2 border rounded mb-2"/>
 
           <button wire:click="buscarCliente"
-                  class="bg-orange-500 text-[#072C6B] w-full py-2 rounded mb-2 font-bold">
+                  class="bg-[#ff7a00] hover:bg-[#ff9d2e] text-black w-full py-2 rounded mb-2 font-bold transition">
             Buscar Cliente
           </button>
 
@@ -63,28 +64,37 @@
       <!-- SECCIÓN PRODUCTOS -->
       <div class="col-span-3 space-y-4">
         <!-- Categorías + Botones Ofertas / Destacados -->
-        <div class="bg-white p-4 rounded-lg shadow-lg text-black">
-          <div class="flex gap-3 mb-4">
+        <div class="bg-[#181818] p-4 rounded-lg shadow-lg text-white border border-black/40">
+          <div class="flex flex-wrap gap-3 mb-4">
             <button wire:click="showCategoria"
-                    class="px-4 py-2 rounded {{ $viewMode === 'categoria' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-black' }}">
+                    class="px-4 py-2 rounded-full text-sm font-semibold transition
+                    {{ $viewMode === 'categoria'
+                        ? 'bg-[#ff7a00] text-black shadow-md'
+                        : 'bg-[#333333] text-white hover:bg-[#444444]' }}">
               Categorías
             </button>
 
             <button wire:click="showOfertas"
-                    class="px-4 py-2 rounded {{ $viewMode === 'ofertas' ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-black' }}">
+                    class="px-4 py-2 rounded-full text-sm font-semibold transition
+                    {{ $viewMode === 'ofertas'
+                        ? 'bg-[#ff9d2e] text-black shadow-md'
+                        : 'bg-[#333333] text-white hover:bg-[#444444]' }}">
               Ofertas
             </button>
 
             <button wire:click="showDestacados"
-                    class="px-4 py-2 rounded {{ $viewMode === 'destacados' ? 'bg-green-600 text-white' : 'bg-gray-200 text-black' }}">
+                    class="px-4 py-2 rounded-full text-sm font-semibold transition
+                    {{ $viewMode === 'destacados'
+                        ? 'bg-[#ffcc4d] text-black shadow-md'
+                        : 'bg-[#333333] text-white hover:bg-[#444444]' }}">
               Destacados
             </button>
           </div>
 
           @if($viewMode === 'ofertas')
-            <p class="text-sm text-gray-500 mb-3">Mostrando todas las ofertas activas.</p>
+            <p class="text-sm text-gray-300 mb-3">Mostrando todas las ofertas activas.</p>
           @elseif($viewMode === 'destacados')
-            <p class="text-sm text-gray-500 mb-3">Mostrando los {{ $limitDestacados }} productos mejor calificados.</p>
+            <p class="text-sm text-gray-300 mb-3">Mostrando los {{ $limitDestacados }} productos mejor calificados.</p>
           @endif
 
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -92,12 +102,12 @@
               @forelse ($categorias as $index => $item)
                 <div wire:click="prodcutosCategoria({{ $item->id_categoria }})"
                      class="flex items-center rounded-lg shadow cursor-pointer hover:scale-105 transition duration-200 p-2"
-                     style="background-color: {{ ['#ffeb3b', '#ff9800', '#8bc34a', '#03a9f4', '#e91e63'][$index % 5] }};">
+                     style="background-color: {{ ['#ff7a00', '#ff9d2e', '#ffcc4d', '#d6452f', '#1a1a1a'][$index % 5] }};">
                   <img class="w-20 h-14 rounded object-cover" src="/storage/img/{{ $item->foto }}">
                   <p class="text-white font-semibold text-lg ml-3">{{ $item->nombre }}</p>
                 </div>
               @empty
-                <p class="text-gray-500">No hay Categorías</p>
+                <p class="text-gray-300">No hay Categorías</p>
               @endforelse
             @else
               @forelse ($productos as $item)
@@ -172,35 +182,37 @@
                   </div>
                 </div>
               @empty
-                <p class="col-span-2 text-center text-gray-500">No hay Productos</p>
+                <p class="col-span-2 text-center text-gray-300">No hay Productos</p>
               @endforelse
             @endif
           </div>
         </div>
 
         <!-- Buscador -->
-        <div class="bg-white p-4 rounded-lg shadow-lg text-black">
+        <div class="bg-[#181818] p-4 rounded-lg shadow-lg text-white border border-black/40">
           @auth('web')
           <div class="flex justify-end mb-3">
-            <a href="{{ route('reportes.ventas') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+            <a href="{{ route('reportes.ventas') }}"
+               class="bg-[#ff9d2e] hover:bg-[#ffcc4d] text-black px-4 py-2 rounded-full font-semibold transition">
               Reportes
             </a>
           </div>
           @endauth
-          <h2 class="text-blue-700 font-semibold mb-2">Buscar Producto</h2>
+          <h2 class="text-[#ff7a00] font-semibold mb-2">Buscar Producto</h2>
           <div class="flex items-center">
             <input type="search" wire:model="searchProducto" wire:keydown.enter="clickBuscar"
                    placeholder="Buscar Producto"
-                   class="w-full px-4 py-2 border rounded-lg"/>
+                   class="w-full px-4 py-2 border rounded-lg text-black"/>
 
             <button wire:click="clickBuscar"
-                    class="bg-orange-500 rounded-xl px-4 py-2 ml-3 font-bold">
+                    class="bg-[#ff7a00] hover:bg-[#ff9d2e] text-black rounded-xl px-4 py-2 ml-3 font-bold transition">
               Buscar
             </button>
           </div>
+
           @if(!empty($recomendados))
           <div class="mt-3">
-            <p class="text-sm text-gray-500 mb-2">Recomendados</p>
+            <p class="text-sm text-gray-300 mb-2">Recomendados</p>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               @foreach($recomendados as $rec)
                 <div class="flex items-center p-2 border rounded-lg bg-white">
@@ -209,7 +221,8 @@
                     <p class="text-sm font-medium truncate text-black">{{$rec->nombre}}</p>
                     <p class="text-xs text-gray-500 truncate">{{$rec->descripcion}}</p>
                   </div>
-                  <button wire:click="addProducto({{$rec->id_producto}})" class="bg-green-600 hover:bg-green-700 w-8 h-8 rounded text-white ml-2">
+                  <button wire:click="addProducto({{$rec->id_producto}})"
+                          class="bg-green-600 hover:bg-green-700 w-8 h-8 rounded text-white ml-2">
                     <i class="fas fa-plus"></i>
                   </button>
                 </div>
@@ -220,7 +233,7 @@
         </div>
 
         <!-- Productos (lista principal) -->
-        <div class="bg-white grid grid-cols-2 gap-4 rounded-lg shadow-lg p-4 text-black">
+        <div class="bg-[#181818] grid grid-cols-2 gap-4 rounded-lg shadow-lg p-4 text-white border border-black/40">
           @forelse ($productos as $item)
             <div class="flex items-start p-3 border rounded-lg bg-white">
               <img class="w-16 h-16 rounded-lg object-cover mr-3" src="/storage/img/{{$item->foto}}">
@@ -292,7 +305,7 @@
               </div>
             </div>
           @empty
-            <p class="col-span-2 text-center text-gray-500">No hay Productos</p>
+            <p class="col-span-2 text-center text-gray-300">No hay Productos</p>
           @endforelse
         </div>
       </div>
@@ -301,17 +314,16 @@
     <!-- CARRITO Y PAGO -->
     <div class="grid grid-cols-3 gap-4 mt-6">
       <!-- Carrito -->
-      <div class="bg-white p-4 rounded-lg shadow-lg col-span-2 text-black">
-        <h2 class="text-blue-700 font-semibold mb-3 text-center">Carrito de Compras</h2>
+      <div class="bg-[#181818] p-4 rounded-lg shadow-lg col-span-2 text-white border border-black/40">
+        <h2 class="text-center text-[#ff7a00] font-semibold mb-3">Carrito de Compras</h2>
 
         @forelse ($carrito as $item)
-          <div class="flex justify-between items-center border-b py-2">
+          <div class="flex justify-between items-center border-b border-white/10 py-2">
             <img src="/storage/img/{{$item['producto']['foto']}}" class="rounded-lg w-16 h-16">
 
             <div class="flex-1 px-4">
-              <p class="font-semibold">{{$item['producto']['nombre']}}</p>
+              <p class="font-semibold text-white">{{$item['producto']['nombre']}}</p>
 
-              {{-- Estado / Badge --}}
               @php
                 $st = $item['producto']['status'] ?? '';
               @endphp
@@ -326,14 +338,15 @@
                 <span class="inline-block text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-800">{{ $st }}</span>
               @endif
 
-              <p class="text-gray-600 text-sm mt-1">{{ $item['producto']['descripcion'] ?? '' }}</p>
+              <p class="text-gray-300 text-sm mt-1">{{ $item['producto']['descripcion'] ?? '' }}</p>
             </div>
 
-            {{-- Precio del item (usa el precio guardado en el carrito) --}}
-            <p class="flex-1 text-center font-semibold">Bs. {{ number_format($item['precio'], 2, '.', ',') }}</p>
+            <p class="flex-1 text-center font-semibold text-[#ffcc4d]">
+              Bs. {{ number_format($item['precio'], 2, '.', ',') }}
+            </p>
 
             <input disabled value="{{$item['cantidad']}}"
-                   class="border bg-gray-300 w-20 rounded text-center">
+                   class="border bg-gray-300 w-20 rounded text-center text-black">
 
             <div class="flex space-x-1 ml-3">
               <button wire:click="addProducto({{$item['producto']['id_producto']}})"
@@ -344,43 +357,47 @@
             </div>
           </div>
         @empty
-          <p class="text-center text-gray-500">No hay productos en el carrito.</p>
+          <p class="text-center text-gray-300">No hay productos en el carrito.</p>
         @endforelse
       </div>
 
       <!-- Pago -->
-      <div class="bg-white p-4 rounded-lg shadow-lg text-black">
-        <h2 class="text-blue-700 font-semibold mb-3">Resumen</h2>
+      <div class="bg-[#181818] p-4 rounded-lg shadow-lg text-white border border-black/40">
+        <h2 class="text-[#ff7a00] font-semibold mb-3">Resumen</h2>
 
-        <p class="text-xl font-bold mb-3">Total: Bs. {{ number_format($total, 2, '.', ',') }}</p>
+        <p class="text-xl font-bold mb-3 text-[#ffcc4d]">
+          Total: Bs. {{ number_format($total, 2, '.', ',') }}
+        </p>
 
-        <label class="block text-sm font-medium text-gray-700">Tipo de Pago</label>
-        <select wire:model="tipoPagoId" class="w-full p-2 border rounded mb-3">
+        <label class="block text-sm font-medium text-gray-200">Tipo de Pago</label>
+        <select wire:model="tipoPagoId" class="w-full p-2 border rounded mb-3 text-black">
           <option value="">-- Seleccione tipo de pago --</option>
           @foreach ($tiposPago as $pago)
             <option value="{{ $pago->id_pago }}">{{ $pago->nombre }}</option>
           @endforeach
         </select>
-        @error('tipoPagoId') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+        @error('tipoPagoId') <span class="text-red-400 text-sm">{{ $message }}</span> @enderror
 
         @if($tipoPagoId && $tipoPagoId == $efectivoId)
-          <label class="block text-sm font-medium text-gray-700">Monto Recibido</label>
+          <label class="block text-sm font-medium text-gray-200">Monto Recibido</label>
           <input type="number" wire:model.defer="montoRecibido"
                  wire:keydown.enter="calculoCambio"
                  wire:change="calculoCambio"
-                 class="w-full p-2 border rounded mb-2" min="0" step="0.01">
+                 class="w-full p-2 border rounded mb-2 text-black" min="0" step="0.01">
 
-          <h3 class="text-green-600 font-semibold">Cambio: Bs. {{ number_format($cambio, 2, '.', ',') }}</h3>
+          <h3 class="text-green-400 font-semibold">
+            Cambio: Bs. {{ number_format($cambio, 2, '.', ',') }}
+          </h3>
         @endif
 
         @if(auth()->guard('clientes')->check())
           <button wire:click="guardar"
-                  class="bg-yellow-500 hover:bg-yellow-600 text-white w-full py-2 rounded mt-4">
+                  class="bg-[#ffcc4d] hover:bg-[#ff9d2e] text-black w-full py-2 rounded mt-4 font-semibold transition">
             Crear Pedido
           </button>
         @else
           <button wire:click="guardar"
-                  class="bg-blue-500 hover:bg-blue-600 text-white w-full py-2 rounded mt-4">
+                  class="bg-[#ff7a00] hover:bg-[#ff9d2e] text-black w-full py-2 rounded mt-4 font-semibold transition">
             Pagar
           </button>
         @endif
@@ -400,12 +417,12 @@
       <div
           x-show="open"
           x-transition
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           style="display: none;"
       >
           <div class="bg-white rounded-lg shadow-lg p-4 w-full max-w-xl text-black">
               <div class="flex justify-between items-center mb-3">
-                  <h3 class="text-lg font-semibold text-blue-700">
+                  <h3 class="text-lg font-semibold text-[#ff7a00]">
                       También te puede gustar
                   </h3>
                   <button
