@@ -176,69 +176,190 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+@php
+    $ventasSummary = [
+        'count' => (int)($summary['count'] ?? 0),
+        'total' => round((float)($summary['total'] ?? 0), 2),
+        'avg' => round((float)($summary['avg'] ?? 0), 2),
+        'items' => (int)($summary['items'] ?? 0),
+        'top_nombre' => $topProductMonth->nombre ?? null,
+        'top_unidades' => (int)($topProductMonth->unidades ?? 0),
+        'month' => (int)($month ?? 1),
+        'year' => (int)($year ?? 0),
+    ];
+    $ventasByDay = collect($byDay)->map(function($d){
+        return [
+            'dia' => $d->dia,
+            'cantidad' => (int)($d->cantidad ?? 0),
+            'total' => round((float)($d->total ?? 0), 2),
+            'top_nombre' => $d->top_nombre,
+            'top_unidades' => (int)($d->top_unidades ?? 0),
+        ];
+    })->values()->toArray();
+    $ventasByPayment = collect($byPayment)->map(function($p){
+        return [
+            'nombre_pago' => $p->nombre_pago,
+            'cantidad' => (int)($p->cantidad ?? 0),
+            'total' => round((float)($p->total ?? 0), 2),
+        ];
+    })->values()->toArray();
+    $ventasTopProducts = collect($topProducts)->map(function($t){
+        return [
+            'nombre' => $t->nombre,
+            'unidades' => (int)($t->unidades ?? 0),
+            'total' => round((float)($t->total ?? 0), 2),
+        ];
+    })->values()->toArray();
+@endphp
 <script>
+    window.__ventasSummary = {!! json_encode($ventasSummary) !!};
+    window.__ventasByDay = {!! json_encode($ventasByDay) !!};
+    window.__ventasByPayment = {!! json_encode($ventasByPayment) !!};
+    window.__ventasTopProducts = {!! json_encode($ventasTopProducts) !!};
+
+    function drawCell(pdf, x, y, w, h, text, align='left', bold=false, topAlign=false) {
+        pdf.setDrawColor(200);
+        pdf.rect(x, y, w, h);
+        pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+        const padding = 3;
+        const baseTy = topAlign ? (y + padding + 3) : (y + h/2 + 3);
+        if (Array.isArray(text)) {
+            let ty = baseTy;
+            for (const line of text) {
+                const tx = align === 'center' ? x + w/2 : (align === 'right' ? x + w - padding : x + padding);
+                const opts = align === 'center' ? { align: 'center' } : (align === 'right' ? { align: 'right' } : undefined);
+                pdf.text(String(line), tx, ty, opts);
+                ty += 5;
+            }
+        } else {
+            const tx = align === 'center' ? x + w/2 : (align === 'right' ? x + w - padding : x + padding);
+            const opts = align === 'center' ? { align: 'center' } : (align === 'right' ? { align: 'right' } : undefined);
+            pdf.text(String(text), tx, baseTy, opts);
+        }
+    }
+
     async function descargarPDF() {
-        if (!window.jspdf || !window.html2canvas) {
-            alert('No se pudo cargar el generador de PDF. Verifica tu conexión.');
+        if (!window.jspdf) {
+            alert('Generador PDF no disponible');
             return;
         }
-
         const { jsPDF } = window.jspdf;
-        const node = document.getElementById('reporte-container');
-        const canvas = await html2canvas(node, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true
-        });
-        const imgData = canvas.toDataURL('image/png');
-
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth  = pdf.internal.pageSize.getWidth();
+        const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth   = pageWidth - 20; // margin
-        const imgHeight  = canvas.height * imgWidth / canvas.width;
+        const margin = 10;
 
-        if (imgHeight <= pageHeight - 20) {
-            pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-        } else {
-            let yPosPx = 0;
-            const usableHeightMm = pageHeight - 20;
-            const usableHeightPx = usableHeightMm * canvas.width / imgWidth;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(18);
+        pdf.text('American Burger', pageWidth/2, margin + 6, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(12);
+        pdf.text('Reporte de Ventas Mensual', pageWidth/2, margin + 12, { align: 'center' });
 
-            while (yPosPx < canvas.height) {
-                const sliceHeightPx = Math.min(usableHeightPx, canvas.height - yPosPx);
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width  = canvas.width;
-                sliceCanvas.height = sliceHeightPx;
+        const s = window.__ventasSummary || {};
+        pdf.setFontSize(10);
+        pdf.text(`Generado: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, pageWidth - margin, margin + 6, { align: 'right' });
+        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        pdf.text(`Periodo: ${meses[(s.month||1)-1]} ${s.year||''}`, pageWidth - margin, margin + 12, { align: 'right' });
 
-                const ctx = sliceCanvas.getContext('2d');
-                ctx.drawImage(
-                    canvas,
-                    0, yPosPx, canvas.width, sliceHeightPx,
-                    0, 0, canvas.width, sliceHeightPx
-                );
+        let y = margin + 18;
+        const boxW = (pageWidth - margin*2 - 15) / 4;
+        drawCell(pdf, margin, y, boxW, 12, 'Ventas', 'left', true);
+        drawCell(pdf, margin, y+12, boxW, 12, `${s.count ?? 0}`, 'left');
+        drawCell(pdf, margin + boxW + 5, y, boxW, 12, 'Total', 'left', true);
+        drawCell(pdf, margin + boxW + 5, y+12, boxW, 12, `Bs. ${(s.total ?? 0).toFixed(2)}`, 'left');
+        drawCell(pdf, margin + (boxW + 5)*2, y, boxW, 12, 'Ticket promedio', 'left', true);
+        drawCell(pdf, margin + (boxW + 5)*2, y+12, boxW, 12, `Bs. ${(s.avg ?? 0).toFixed(2)}`, 'left');
+        drawCell(pdf, margin + (boxW + 5)*3, y, boxW, 12, 'Items vendidos', 'left', true);
+        drawCell(pdf, margin + (boxW + 5)*3, y+12, boxW, 12, `${s.items ?? 0}`, 'left');
 
-                const sliceImg = sliceCanvas.toDataURL('image/png');
-                pdf.addImage(
-                    sliceImg,
-                    'PNG',
-                    10,
-                    10,
-                    imgWidth,
-                    sliceHeightPx * imgWidth / canvas.width
-                );
+        y += 28;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('Totales por día', margin, y);
+        y += 4;
 
-                yPosPx += sliceHeightPx;
-                if (yPosPx < canvas.height) pdf.addPage();
+        const colWDay = [25, 25, 35, pageWidth - margin*2 - 25 - 25 - 35 - 25, 25];
+        const headerH = 12;
+        drawCell(pdf, margin, y, colWDay[0], headerH, 'Día', 'left', true);
+        drawCell(pdf, margin + colWDay[0], y, colWDay[1], headerH, 'Ventas', 'center', true);
+        drawCell(pdf, margin + colWDay[0] + colWDay[1], y, colWDay[2], headerH, 'Total', 'right', true);
+        drawCell(pdf, margin + colWDay[0] + colWDay[1] + colWDay[2], y, colWDay[3], headerH, 'Producto más vendido', 'left', true);
+        drawCell(pdf, margin + colWDay[0] + colWDay[1] + colWDay[2] + colWDay[3], y, colWDay[4], headerH, 'Unid.', 'center', true);
+        y += headerH;
+
+        const rowsDay = window.__ventasByDay || [];
+        const minRowH = 11;
+        for (let i = 0; i < rowsDay.length; i++) {
+            const r = rowsDay[i];
+            const nameLines = pdf.splitTextToSize(String(r.top_nombre || ''), colWDay[3] - 6);
+            const rowH = Math.max(minRowH, 8 + Math.max(0, (nameLines.length - 1)) * 5);
+            if (y + rowH > pageHeight - margin) {
+                pdf.addPage();
+                y = margin;
             }
+            drawCell(pdf, margin, y, colWDay[0], rowH, r.dia, 'left');
+            drawCell(pdf, margin + colWDay[0], y, colWDay[1], rowH, r.cantidad, 'center');
+            drawCell(pdf, margin + colWDay[0] + colWDay[1], y, colWDay[2], rowH, `Bs. ${Number(r.total).toFixed(2)}`, 'right');
+            drawCell(pdf, margin + colWDay[0] + colWDay[1] + colWDay[2], y, colWDay[3], rowH, nameLines, 'left', false, true);
+            drawCell(pdf, margin + colWDay[0] + colWDay[1] + colWDay[2] + colWDay[3], y, colWDay[4], rowH, r.top_unidades, 'center');
+            y += rowH;
+        }
+
+        y += 8;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('Por tipo de pago', margin, y);
+        y += 4;
+        const colWPay = [pageWidth - margin*2 - 60, 25, 35];
+        drawCell(pdf, margin, y, colWPay[0], headerH, 'Tipo de pago', 'left', true);
+        drawCell(pdf, margin + colWPay[0], y, colWPay[1], headerH, 'Ventas', 'center', true);
+        drawCell(pdf, margin + colWPay[0] + colWPay[1], y, colWPay[2], headerH, 'Total', 'right', true);
+        y += headerH;
+        const rowsPay = window.__ventasByPayment || [];
+        for (let i = 0; i < rowsPay.length; i++) {
+            const r = rowsPay[i];
+            const rowH = minRowH;
+            if (y + rowH > pageHeight - margin) {
+                pdf.addPage();
+                y = margin;
+            }
+            drawCell(pdf, margin, y, colWPay[0], rowH, r.nombre_pago, 'left');
+            drawCell(pdf, margin + colWPay[0], y, colWPay[1], rowH, r.cantidad, 'center');
+            drawCell(pdf, margin + colWPay[0] + colWPay[1], y, colWPay[2], rowH, `Bs. ${Number(r.total).toFixed(2)}`, 'right');
+            y += rowH;
+        }
+
+        y += 8;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('Top 5 Productos', margin, y);
+        y += 4;
+        const colWTop = [pageWidth - margin*2 - 60, 25, 35];
+        drawCell(pdf, margin, y, colWTop[0], headerH, 'Producto', 'left', true);
+        drawCell(pdf, margin + colWTop[0], y, colWTop[1], headerH, 'Unidades', 'center', true);
+        drawCell(pdf, margin + colWTop[0] + colWTop[1], y, colWTop[2], headerH, 'Total', 'right', true);
+        y += headerH;
+        const rowsTop = window.__ventasTopProducts || [];
+        for (let i = 0; i < rowsTop.length; i++) {
+            const r = rowsTop[i];
+            const nameLines = pdf.splitTextToSize(String(r.nombre || ''), colWTop[0] - 6);
+            const rowH = Math.max(minRowH, 8 + Math.max(0, (nameLines.length - 1)) * 5);
+            if (y + rowH > pageHeight - margin) {
+                pdf.addPage();
+                y = margin;
+            }
+            drawCell(pdf, margin, y, colWTop[0], rowH, nameLines, 'left', false, true);
+            drawCell(pdf, margin + colWTop[0], y, colWTop[1], rowH, r.unidades, 'center');
+            drawCell(pdf, margin + colWTop[0] + colWTop[1], y, colWTop[2], rowH, `Bs. ${Number(r.total).toFixed(2)}`, 'right');
+            y += rowH;
         }
 
         const mSel = document.querySelector('select[wire\\:model="month"]');
         const ySel = document.querySelector('input[wire\\:model="year"]');
         const m    = mSel ? mSel.value : '';
-        const y    = ySel ? ySel.value : '';
-        const fname = `reporte_ventas_${String(m).padStart(2,'0')}_${y}.pdf`;
+        const yv   = ySel ? ySel.value : '';
+        const fname = `reporte_ventas_${String(m).padStart(2,'0')}_${yv}.pdf`;
         pdf.save(fname);
     }
 </script>

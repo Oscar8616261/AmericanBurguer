@@ -655,4 +655,155 @@
 @livewireScripts
 @stack('scripts')
 
+<script>
+(function(){
+  function getTicketCard(){
+    return document.querySelector('#global-modal-root #ticket-card');
+  }
+  function imprimirTicket(){
+    const card = getTicketCard();
+    if(!card) return;
+    const clone = card.cloneNode(true);
+    const actions = clone.querySelector('.ticket-actions');
+    if (actions) actions.remove();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write('<html><head><title>Ticket</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:Arial,Helvetica,sans-serif;padding:16px;background:#fff} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:6px} th{background:#1a1a1a;color:#fff} .text-right{text-align:right}</style></head><body>'+clone.outerHTML+'</body></html>');
+    doc.close();
+    iframe.onload = function(){
+      iframe.contentWindow.focus();
+      setTimeout(function(){
+        iframe.contentWindow.print();
+        document.body.removeChild(iframe);
+      }, 50);
+    };
+  }
+  function ensureJsPDF(){
+    return new Promise((resolve, reject) => {
+      if (window.jspdf) return resolve();
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('No se pudo cargar jsPDF'));
+      document.head.appendChild(s);
+    });
+  }
+  function drawCell(pdfDoc, x, y, w, h, text, align, bold, topAlign){
+    pdfDoc.setDrawColor(200);
+    pdfDoc.rect(x, y, w, h);
+    pdfDoc.setFont('helvetica', bold ? 'bold' : 'normal');
+    const padding = 3;
+    const baseTy = topAlign ? (y + padding + 3) : (y + h/2 + 3);
+    if (Array.isArray(text)) {
+      let ty = baseTy;
+      for (const line of text) {
+        const tx = align === 'center' ? x + w/2 : (align === 'right' ? x + w - padding : x + padding);
+        const opts = align === 'center' ? { align: 'center' } : (align === 'right' ? { align: 'right' } : undefined);
+        pdfDoc.text(String(line), tx, ty, opts);
+        ty += 5;
+      }
+    } else {
+      const tx = align === 'center' ? x + w/2 : (align === 'right' ? x + w - padding : x + padding);
+      const opts = align === 'center' ? { align: 'center' } : (align === 'right' ? { align: 'right' } : undefined);
+      pdfDoc.text(String(text), tx, baseTy, opts);
+    }
+  }
+  async function descargarTicketPDF(){
+    const card = getTicketCard();
+    if(!card) return;
+    try { await ensureJsPDF(); } catch(e){ alert('No se pudo cargar el generador de PDF.'); return; }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.text('American Burger', pageWidth/2, margin + 6, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+    pdf.text('Ticket de Venta', pageWidth/2, margin + 12, { align: 'center' });
+
+    const s = card.dataset.summary ? JSON.parse(card.dataset.summary) : {};
+    pdf.setFontSize(10);
+    pdf.text(`Fecha: ${s.fecha || ''}`, pageWidth - margin, margin + 6, { align: 'right' });
+    pdf.text(`Ticket: #${s.id || ''}`, pageWidth - margin, margin + 12, { align: 'right' });
+
+    let y = margin + 18;
+    const halfW = (pageWidth - margin*2 - 5) / 2;
+    drawCell(pdf, margin, y, halfW, 18, ['Cliente', `${s.cliente_nombre || ''}`, `CI: ${s.cliente_ci || ''}`, `Dir.: ${s.cliente_direccion || ''}`], 'left', true, true);
+    drawCell(pdf, margin + halfW + 5, y, halfW, 18, ['Administrador', `${s.admin_nombre || ''}`, `ID: ${s.admin_id || ''}`], 'left', true, true);
+    y += 24;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('Detalle', margin, y);
+    y += 4;
+
+    const colW = [pageWidth - margin*2 - 60, 20, 20, 20];
+    const headerH = 12;
+    drawCell(pdf, margin, y, colW[0], headerH, 'Producto', 'left', true);
+    drawCell(pdf, margin + colW[0], y, colW[1], headerH, 'Cant.', 'center', true);
+    drawCell(pdf, margin + colW[0] + colW[1], y, colW[2], headerH, 'Precio', 'right', true);
+    drawCell(pdf, margin + colW[0] + colW[1] + colW[2], y, colW[3], headerH, 'Subt.', 'right', true);
+    y += headerH;
+
+    let rows = card.dataset.rows ? JSON.parse(card.dataset.rows) : [];
+    if (!rows.length) {
+      const trs = card.querySelectorAll('table tbody tr');
+      rows = Array.from(trs).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        const nombre = tds[0]?.textContent?.trim() || '';
+        const cantidad = Number(tds[1]?.textContent?.trim() || 0);
+        const precioTxt = (tds[2]?.textContent || '').replace(/[^0-9.,]/g,'').replace(',','');
+        const subtotalTxt = (tds[3]?.textContent || '').replace(/[^0-9.,]/g,'').replace(',','');
+        const precio = Number(precioTxt) || 0;
+        const subtotal = Number(subtotalTxt) || (precio * cantidad);
+        return { nombre, cantidad, precio, subtotal };
+      });
+    }
+    const minRowH = 11;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const nameLines = pdf.splitTextToSize(String(r.nombre || ''), colW[0] - 6);
+      const rowH = Math.max(minRowH, 8 + Math.max(0, (nameLines.length - 1)) * 5);
+      if (y + rowH > pageHeight - margin - 20) {
+        pdf.addPage();
+        y = margin;
+      }
+      drawCell(pdf, margin, y, colW[0], rowH, nameLines, 'left', false, true);
+      drawCell(pdf, margin + colW[0], y, colW[1], rowH, r.cantidad, 'center');
+      drawCell(pdf, margin + colW[0] + colW[1], y, colW[2], rowH, `Bs. ${Number(r.precio).toFixed(2)}`, 'right');
+      drawCell(pdf, margin + colW[0] + colW[1] + colW[2], y, colW[3], rowH, `Bs. ${Number(r.subtotal).toFixed(2)}`, 'right');
+      y += rowH;
+    }
+
+    y += 6;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text(`Total: Bs. ${Number(s.total || 0).toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+
+    const id = s.id || '';
+    pdf.save(`ticket_venta_${id}.pdf`);
+  }
+
+  document.addEventListener('click', function(e){
+    if (e.target.closest('#btn-imprimir-ticket')) { e.preventDefault(); imprimirTicket(); }
+    if (e.target.closest('#btn-pdf-ticket')) { e.preventDefault(); descargarTicketPDF(); }
+  });
+
+  window.imprimirTicket = imprimirTicket;
+  window.descargarTicketPDF = descargarTicketPDF;
+})();
+</script>
+
 </html>
